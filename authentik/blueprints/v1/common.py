@@ -41,7 +41,7 @@ def get_attrs(obj: SerializerModel) -> dict[str, Any]:
         _field: Field
         if field_name not in data:
             continue
-        if _field.read_only:
+        if _field.read_only and field_name != "meta_icon":
             data.pop(field_name, None)
         if _field.get_initial() == data.get(field_name, None):
             data.pop(field_name, None)
