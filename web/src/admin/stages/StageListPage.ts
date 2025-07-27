@@ -20,6 +20,7 @@ import "#admin/stages/mtls/MTLSStageForm";
 import "#admin/stages/password/PasswordStageForm";
 import "#admin/stages/prompt/PromptStageForm";
 import "#admin/stages/redirect/RedirectStageForm";
+import "#admin/stages/saml_logout/SAMLLogoutStageForm";
 import "#admin/stages/source/SourceStageForm";
 import "#admin/stages/user_delete/UserDeleteStageForm";
 import "#admin/stages/user_login/UserLoginStageForm";

@@ -5,6 +5,10 @@ from django.urls import path
 from authentik.providers.saml.api.property_mappings import SAMLPropertyMappingViewSet
 from authentik.providers.saml.api.providers import SAMLProviderViewSet
 from authentik.providers.saml.views import metadata, slo, sso
+from authentik.providers.saml.views.logout_redirect import (
+    SAMLFrontChannelLogoutView,
+    SAMLLogoutContinueView,
+)
 
 urlpatterns = [
     # SSO Bindings
@@ -40,6 +44,17 @@ urlpatterns = [
         "<slug:application_slug>/metadata/",
         metadata.MetadataDownload.as_view(),
         name="metadata-download",
+    ),
+    # Front-channel logout
+    path(
+        "logout/saml/",
+        SAMLFrontChannelLogoutView.as_view(),
+        name="saml-logout-front-channel",
+    ),
+    path(
+        "logout/saml/continue/",
+        SAMLLogoutContinueView.as_view(),
+        name="saml-logout-continue",
     ),
 ]
 
