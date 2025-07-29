@@ -12,7 +12,11 @@ class UserLogoutStageSerializer(StageSerializer):
 
     class Meta:
         model = UserLogoutStage
-        fields = StageSerializer.Meta.fields
+        fields = StageSerializer.Meta.fields + [
+            "saml_logout_method",
+            "saml_logout_timeout",
+            "saml_use_session_tracking",
+        ]
 
 
 class UserLogoutStageViewSet(UsedByMixin, ModelViewSet):

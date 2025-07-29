@@ -254,6 +254,15 @@ export class AdminSettingsForm extends Form<SettingsRequest> {
                 value="${this._settings?.defaultTokenLength ?? 60}"
                 help=${msg("Default length of generated tokens")}
             ></ak-number-input>
+            <ak-switch-input
+                name="enableIframeSamlLogout"
+                label=${msg("Enable iframe SAML logout")}
+                ?checked="${this._settings?.enableIframeSamlLogout}"
+                help=${msg(
+                    "When enabled, SAML logout will use iframes for parallel logout. When disabled, redirect chain is used.",
+                )}
+            >
+            </ak-switch-input>
         `;
     }
 }

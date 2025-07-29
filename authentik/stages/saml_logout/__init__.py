@@ -1,1 +1,0 @@
-"""SAML Logout stage"""

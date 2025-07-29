@@ -228,8 +228,23 @@ class SAMLLogoutContinueView(View):
         # Mark SAML logout as complete
         request.session["_saml_logout_complete"] = True
 
-        # Get the invalidation flow URL to continue the logout process
+        # Check if we need to perform logout after SAML
+        if request.session.pop("_logout_after_saml", False):
+            from django.contrib.auth import logout
+            LOGGER.debug("SAML logout complete, performing authentik logout")
+            logout(request)
+            request.session.save()
+            # Redirect to root
+            return redirect(reverse("authentik_core:root-redirect"))
 
+        # Check if we have a return URL from the flow executor
+        return_to = request.session.pop("_saml_logout_return_to", None)
+        if return_to:
+            LOGGER.debug("Returning to flow executor", url=return_to)
+            request.session.save()
+            return redirect(return_to)
+
+        # Get the invalidation flow URL to continue the logout process
         try:
             # Try to get the invalidation flow from the request brand
             invalidation_flow = request.brand.flow_invalidation

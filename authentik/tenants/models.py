@@ -111,6 +111,11 @@ class Tenant(TenantMixin, SerializerModel):
         default=DEFAULT_TOKEN_LENGTH,
         validators=[MinValueValidator(1)],
     )
+    enable_iframe_saml_logout = models.BooleanField(
+        help_text=_("Enable iframe-based SAML logout. When enabled, SAML logout will use iframes "
+                    "for parallel logout. When disabled, redirect chain is used."),
+        default=False,
+    )
 
     def save(self, *args, **kwargs):
         if self.schema_name == "template":

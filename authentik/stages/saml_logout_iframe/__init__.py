@@ -1,1 +1,0 @@
-"""SAML iframe logout stage"""
