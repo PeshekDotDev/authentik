@@ -4,13 +4,13 @@ from celery import group
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from structlog.stdlib import get_logger
-from urllib.parse import urlencode
 
-from authentik.flows.stage import StageView
+from rest_framework.fields import CharField, DictField, IntegerField, ListField
+from authentik.flows.challenge import Challenge, ChallengeResponse
+from authentik.flows.exceptions import StageInvalidException
+from authentik.flows.stage import ChallengeStageView, StageView
 from authentik.providers.saml.models import SAMLBindings, SAMLProvider
-from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
 from authentik.providers.saml.tasks import send_saml_logout_request
-from authentik.sources.saml.processors.constants import SAML_NAME_ID_FORMAT_EMAIL
 
 LOGGER = get_logger()
 
@@ -100,27 +100,29 @@ class SAMLLogoutStageView(StageView):
         return self.executor.stage_ok()
 
 
-class SAMLIframeLogoutStageView(StageView):
+
+class SAMLIFrameChallenge(Challenge):
+    """Challenge for SAML iframe logout"""
+
+    component = CharField(default="ak-stage-saml-iframe-logout")
+    logout_urls = ListField(child=DictField())
+    timeout = IntegerField()
+
+
+class SAMLIFrameChallengeResponse(ChallengeResponse):
+    """Response to SAML iframe challenge"""
+
+    component = CharField(default="ak-stage-saml-iframe-logout")
+
+
+class SAMLIframeLogoutStageView(ChallengeStageView):
     """SAML iframe logout stage - handles SAML logout using iframes"""
 
-    def dispatch(self, request: HttpRequest) -> HttpResponse:
-        """Handle dispatch for iframe logout"""
-        # Check if user is authenticated
-        if not request.user.is_authenticated:
-            LOGGER.debug("User not authenticated, skipping SAML iframe logout")
-            # Mark SAML logout as complete and continue
-            request.session["_saml_logout_complete"] = True
-            request.session.save()
-            return self.executor.stage_ok()
+    response_class = SAMLIFrameChallengeResponse
 
-        # Return HTML page with iframes
-        return self.render_iframe_logout(request)
-
-    def render_iframe_logout(self, request: HttpRequest) -> HttpResponse:
-        """Generate HTML page with logout iframes"""
-
-        # Get the actual user object (handle SimpleLazyObject)
-        user = request.user
+    def get_challenge(self, **kwargs) -> Challenge:
+        # Get the actual user object
+        user = self.request.user
         if hasattr(user, "_wrapped"):
             actual_user = user._wrapped
             if actual_user is None:
@@ -129,21 +131,28 @@ class SAMLIframeLogoutStageView(StageView):
         else:
             actual_user = user
 
-        # Get all SAML providers that need iframe logout
-        # Support both POST and REDIRECT bindings
+        # Get all SAML providers
         providers = SAMLProvider.objects.filter(
             application__isnull=False,
             sls_url__isnull=False,
             sls_binding__in=[SAMLBindings.POST, SAMLBindings.REDIRECT],
         ).exclude(sls_url="")
 
-        LOGGER.info(
-            "Found SAML providers for iframe logout",
-            provider_count=providers.count(),
-            providers=[(p.name, p.sls_binding) for p in providers],
-        )
+        if not providers.exists():
+            LOGGER.debug("No SAML providers require iframe logout")
+            self.request.session["_saml_logout_complete"] = True
+            self.request.session.save()
+            # This is a bit of a hack, but we need to short-circuit the flow here
+            # since we're not actually showing a challenge.
+            raise StageInvalidException("No providers for iframe logout.")
+
 
         logout_urls = []
+
+        # Import here to avoid circular imports
+        from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
+        from authentik.sources.saml.processors.constants import SAML_NAME_ID_FORMAT_EMAIL
+        from urllib.parse import urlencode
 
         for provider in providers:
             try:
@@ -155,7 +164,7 @@ class SAMLIframeLogoutStageView(StageView):
                     try:
                         value = provider.name_id_mapping.evaluate(
                             user=actual_user,
-                            request=request,
+                            request=self.request,
                             provider=provider,
                         )
                         if value is not None:
@@ -177,45 +186,30 @@ class SAMLIframeLogoutStageView(StageView):
 
                 # Handle different bindings
                 if provider.sls_binding == SAMLBindings.POST:
-                    # Generate SAML request for POST binding
                     saml_request_encoded = processor.encode_post()
-                    # For POST binding, we need the URL and SAML request data
-                    logout_urls.append(
-                        {
-                            "url": provider.sls_url,
-                            "saml_request": saml_request_encoded,
-                            "provider_name": provider.name,
-                            "binding": "POST",
-                        }
-                    )
+                    logout_urls.append({
+                        "url": provider.sls_url,
+                        "saml_request": saml_request_encoded,
+                        "provider_name": provider.name,
+                        "binding": "POST",
+                    })
                 elif provider.sls_binding == SAMLBindings.REDIRECT:
-                    # Generate SAML request for REDIRECT binding
                     saml_request_encoded = processor.encode_redirect()
-                    # For REDIRECT binding, build the full URL with query parameters
-                    params = {
-                        "SAMLRequest": saml_request_encoded,
-                    }
-                    # Check if sls_url already has query parameters
+                    params = {"SAMLRequest": saml_request_encoded}
                     if "?" in provider.sls_url:
-                        # URL already has query params, append with &
                         full_url = f"{provider.sls_url}&{urlencode(params)}"
                     else:
-                        # No query params yet, add with ?
                         full_url = f"{provider.sls_url}?{urlencode(params)}"
-                    logout_urls.append(
-                        {
-                            "url": full_url,
-                            "provider_name": provider.name,
-                            "binding": "REDIRECT",
-                        }
-                    )
+                    logout_urls.append({
+                        "url": full_url,
+                        "provider_name": provider.name,
+                        "binding": "REDIRECT",
+                    })
 
                 LOGGER.info(
                     "Added provider for iframe logout",
                     provider=provider.name,
                     binding=provider.sls_binding,
-                    sls_url=provider.sls_url,
-                    name_id=name_id,
                 )
 
             except Exception as exc:
@@ -226,91 +220,27 @@ class SAMLIframeLogoutStageView(StageView):
                 )
                 continue
 
-        if not logout_urls:
-            LOGGER.info("No providers require iframe logout")
-            # No URLs to logout from, just continue the flow
-            request.session["_saml_logout_complete"] = True
-            request.session.save()
-            return self.executor.stage_ok()
-
-        # Get timeout from stage configuration
-        # When injected dynamically, we'll pass timeout as a parameter
+        # Get timeout
         timeout = getattr(self.executor.current_stage, "iframe_timeout", 5000)
 
-        # Mark SAML logout as complete - the iframes will run but we'll continue immediately
-        request.session["_saml_logout_complete"] = True
-        request.session.save()
+        return SAMLIFrameChallenge(data={
+            "logout_urls": logout_urls,
+            "timeout": timeout,
+        })
 
-        LOGGER.info(
-            "Returning iframe logout page",
-            provider_count=len(logout_urls),
-            timeout=timeout,
-        )
+    def challenge_valid(self, response: ChallengeResponse) -> HttpResponse:
+        """Challenge successfully submitted"""
+        self.request.session["_saml_logout_complete"] = True
+        self.request.session.save()
+        return self.executor.stage_ok()
 
-        # Generate HTML with iframes for each logout URL
-        html_parts = []
-        html_parts.append('<!DOCTYPE html>')
-        html_parts.append('<html>')
-        html_parts.append('<head>')
-        html_parts.append('<title>SAML Logout</title>')
-        html_parts.append('<meta charset="utf-8">')
-        html_parts.append('</head>')
-        html_parts.append('<body>')
-        html_parts.append('<div style="text-align: center; padding: 2rem;">')
-        html_parts.append('<h2>Logging out of SAML providers...</h2>')
-        html_parts.append(f'<p>This will complete in {timeout/1000} seconds</p>')
-
-        # Add hidden iframes for each logout URL
-        for i, logout_data in enumerate(logout_urls):
-            if logout_data["binding"] == "REDIRECT":
-                # For redirect binding, just use iframe src
-                html_parts.append(
-                    f'<iframe src="{logout_data["url"]}" style="display: none;" '
-                    f'id="saml-logout-{i}"></iframe>'
-                )
-            else:
-                # For POST binding, create form and submit it
-                form_id = f"saml-form-{i}"
-                iframe_id = f"saml-iframe-{i}"
-                html_parts.append(
-                    f'<iframe name="{iframe_id}" style="display: none;"></iframe>'
-                )
-                html_parts.append(
-                    f'<form id="{form_id}" method="POST" '
-                    f'action="{logout_data["url"]}" target="{iframe_id}">'
-                )
-                html_parts.append(
-                    f'<input type="hidden" name="SAMLRequest" '
-                    f'value="{logout_data["saml_request"]}">'
-                )
-                html_parts.append('</form>')
-                html_parts.append(
-                    f'<script>document.getElementById("{form_id}").submit();</script>'
-                )
-
-        # Add script to continue after timeout
-        from django.urls import reverse
-        flow_url = reverse(
-            "authentik_core:if-flow",
-            kwargs={"flow_slug": self.executor.flow.slug}
-        )
-        
-        html_parts.append(f'''
-        <script>
-        setTimeout(function() {{
-            // Continue the flow after the timeout
-            window.location.href = "{flow_url}";
-        }}, {timeout});
-        </script>
-        </div>
-        </body>
-        </html>''')
-
-        # Return the HTML response directly
-        return HttpResponse("".join(html_parts), content_type="text/html")
+    def challenge_invalid(self, response: ChallengeResponse) -> HttpResponse:
+        """Challenge failed, cancel flow"""
+        return self.executor.stage_invalid()
 
 
-class SAMLCombinedLogoutStageView(SAMLIframeLogoutStageView):
+
+class SAMLCombinedLogoutStageView(StageView):
     """Combined SAML logout stage that can switch between redirect and iframe methods
 
     Inherits from SAMLIframeLogoutStageView to reuse its iframe logout logic.
@@ -325,12 +255,16 @@ class SAMLCombinedLogoutStageView(SAMLIframeLogoutStageView):
         """Choose between redirect and iframe logout based on configuration"""
         logout_method = self.get_logout_method()
 
-        # For redirect method, use the original redirect chain logic
-        if logout_method == SAMLLogoutMethod.REDIRECT:
-            redirect_stage = SAMLLogoutStageView(self.executor)
-            redirect_stage.request = request
-            redirect_stage.kwargs = self.kwargs
-            return redirect_stage.dispatch(request)
+        if logout_method == SAMLLogoutMethod.IFRAME:
+            iframe_stage = SAMLIframeLogoutStageView(self.executor)
+            iframe_stage.request = request
+            iframe_stage.kwargs = self.kwargs
+            # Pass the current stage so iframe_timeout can be accessed
+            iframe_stage.executor.current_stage = self.executor.current_stage
+            return iframe_stage.dispatch(request)
 
-        # For iframe method, use parent's dispatch
-        return super().dispatch(request)
+        # For redirect method, use the original redirect chain logic
+        redirect_stage = SAMLLogoutStageView(self.executor)
+        redirect_stage.request = request
+        redirect_stage.kwargs = self.kwargs
+        return redirect_stage.dispatch(request)

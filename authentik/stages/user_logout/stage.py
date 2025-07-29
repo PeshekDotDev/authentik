@@ -72,8 +72,10 @@ class UserLogoutStageView(StageView):
         self.request.session["_saml_stage_injected"] = True
         self.request.session.save()
         
-        # Insert it as the next stage
+        # Insert the SAML stage AND re-insert this stage after it
+        # This ensures we come back to UserLogoutStage after SAML logout
         self.executor.plan.insert_stage(saml_stage)
+        self.executor.plan.insert_stage(self.executor.current_stage)
         
         # Continue to the injected stage
         return self.executor.stage_ok()
@@ -85,6 +87,20 @@ class UserLogoutStageView(StageView):
             user=self.request.user,
             flow_slug=self.executor.flow.slug,
         )
+        
+        # Clean up any SAML-related session flags before logout
+        # This ensures a clean state for the next login/logout cycle
+        saml_flags = [
+            "_saml_logout_complete",
+            "_saml_stage_injected", 
+            "_saml_logout_return_to",
+            "_saml_iframe_timeout"
+        ]
+        for flag in saml_flags:
+            if flag in self.request.session:
+                del self.request.session[flag]
+        self.request.session.save()
+        
         logout(self.request)
         return self.executor.stage_ok()
 
@@ -102,6 +118,10 @@ class UserLogoutStageView(StageView):
                 del request.session["_saml_logout_complete"]
             if "_saml_stage_injected" in request.session:
                 del request.session["_saml_stage_injected"]
+            if "_saml_logout_return_to" in request.session:
+                del request.session["_saml_logout_return_to"]
+            if "_saml_iframe_timeout" in request.session:
+                del request.session["_saml_iframe_timeout"]
             request.session.save()
             # Proceed to logout
             return self.dispatch_logout()
@@ -115,13 +135,6 @@ class UserLogoutStageView(StageView):
                 flow_slug=self.executor.flow.slug,
             )
             return self.inject_saml_logout_stage()
-        
-        # Clean up any stale session flags before logout
-        if "_saml_logout_complete" in request.session:
-            del request.session["_saml_logout_complete"]
-        if "_saml_stage_injected" in request.session:
-            del request.session["_saml_stage_injected"]
-        request.session.save()
         
         # Now actually log out the user
         return self.dispatch_logout()

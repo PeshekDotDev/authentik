@@ -10,6 +10,7 @@ from authentik.providers.saml.views.logout_redirect import (
     SAMLFrontChannelLogoutView,
     SAMLLogoutContinueView,
 )
+from authentik.providers.saml.views.logout_iframe import IframeLogoutView
 from authentik.providers.saml.views.sp_slo import (
     SPInitiatedSLOBindingPOSTView,
     SPInitiatedSLOBindingRedirectView,
@@ -66,6 +67,12 @@ urlpatterns = [
         "logout/saml/continue/",
         SAMLLogoutContinueView.as_view(),
         name="saml-logout-continue",
+    ),
+    # Iframe logout
+    path(
+        "logout/saml/iframe/",
+        IframeLogoutView.as_view(),
+        name="saml-logout-iframe",
     ),
 ]
 

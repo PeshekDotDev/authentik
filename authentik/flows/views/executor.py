@@ -35,6 +35,7 @@ from authentik.flows.challenge import (
     ShellChallenge,
     WithUserInfoChallenge,
 )
+from authentik.providers.saml.stages.logout import SAMLIFrameChallenge
 from authentik.flows.exceptions import EmptyFlowException, FlowNonApplicableException
 from authentik.flows.models import (
     ConfigurableStage,
@@ -80,6 +81,7 @@ def challenge_types():
         if cls == WithUserInfoChallenge:
             continue
         mapping[cls().fields["component"].default] = cls
+    mapping[SAMLIFrameChallenge().fields["component"].default] = SAMLIFrameChallenge
     return mapping
 
 

@@ -468,6 +468,12 @@ export class FlowExecutor
                     .host=${this as StageHost}
                     .challenge=${this.challenge}
                 ></ak-stage-authenticator-validate>`;
+            case "ak-stage-saml-iframe-logout":
+                await import("#flow/stages/saml_logout_iframe/SamlLogoutIframeStage");
+                return html`<ak-stage-saml-iframe-logout
+                    .host=${this as StageHost}
+                    .challenge=${this.challenge}
+                ></ak-stage-saml-iframe-logout>`;
             case "ak-stage-user-login":
                 await import("#flow/stages/user_login/UserLoginStage");
                 return html`<ak-stage-user-login
