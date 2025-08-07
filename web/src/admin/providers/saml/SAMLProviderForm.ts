@@ -1,4 +1,4 @@
-import { renderForm, SAMLProviderFormContext } from "./SAMLProviderFormForm.js";
+import { renderForm } from "./SAMLProviderFormForm.js";
 
 import { DEFAULT_CONFIG } from "#common/api/config";
 
@@ -79,29 +79,15 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
             this.requestUpdate();
         };
 
-        const context: SAMLProviderFormContext = {
-            provider: this.instance
-                ? {
-                      ...this.instance,
-                      backchannelPostLogout: this.backchannelPostLogout,
-                  }
-                : { backchannelPostLogout: this.backchannelPostLogout },
-            errors: [],
-            signingKp: {
-                hasSigningKp: this.hasSigningKp,
-                setHasSigningKp,
-            },
-            slsUrl: {
-                hasSlsUrl: this.hasSlsUrl,
-                setHasSlsUrl,
-            },
-            slsBinding: {
-                hasPostBinding: this.hasPostBinding,
-                setSlsBinding,
-            },
-        };
-
-        return renderForm(context);
+        return renderForm({
+            provider: this.instance,
+            setHasSigningKp,
+            hasSigningKp: this.hasSigningKp,
+            setHasSlsUrl,
+            hasSlsUrl: this.hasSlsUrl,
+            setSlsBinding,
+            hasPostBinding: this.hasPostBinding,
+        });
     }
 }
 

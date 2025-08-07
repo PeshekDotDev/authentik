@@ -29,23 +29,6 @@ import { msg } from "@lit/localize";
 import { html, nothing } from "lit";
 import { ifDefined } from "lit/directives/if-defined.js";
 
-export interface SAMLProviderFormContext {
-    provider: Partial<SAMLProvider>;
-    errors: ValidationError;
-    signingKp: {
-        hasSigningKp: boolean;
-        setHasSigningKp: (ev: InputEvent) => void;
-    };
-    slsUrl: {
-        hasSlsUrl: boolean;
-        setHasSlsUrl: (ev: Event) => void;
-    };
-    slsBinding: {
-        hasPostBinding: boolean;
-        setSlsBinding: (ev: Event) => void;
-    };
-}
-
 const serviceProviderBindingOptions: RadioOption<SpBindingEnum>[] = [
     {
         label: msg("Redirect"),
@@ -84,9 +67,9 @@ function renderHasSigningKp(provider: Partial<SAMLProvider>) {
 }
 
 function renderHasSlsUrl(
-    provider?: Partial<SAMLProvider>,
+    provider: Partial<SAMLProvider>,
     hasPostBinding: boolean = false,
-    setSlsBinding?: (ev: Event) => void,
+    setSlsBinding: (ev: Event) => void,
 ) {
     return html`<ak-radio-input
             label=${msg("SLS Binding")}
@@ -113,20 +96,33 @@ function renderHasSlsUrl(
               `
             : nothing}`;
 }
+export interface SAMLProviderFormProps {
+    provider?: Partial<SAMLProvider>;
+    errors?: ValidationError;
+    setHasSigningKp: (ev: InputEvent) => void;
+    hasSigningKp: boolean;
+    setHasSlsUrl: (ev: Event) => void;
+    hasSlsUrl: boolean;
+    setSlsBinding: (ev: Event) => void;
+    hasPostBinding: boolean;
+}
 
 export function renderForm({
-    provider,
-    errors,
-    signingKp,
-    slsUrl,
-    slsBinding,
-}: SAMLProviderFormContext) {
+    provider = {},
+    errors = {},
+    setHasSigningKp,
+    hasSigningKp,
+    setHasSlsUrl,
+    hasSlsUrl,
+    setSlsBinding,
+    hasPostBinding,
+}: SAMLProviderFormProps) {
     return html` <ak-text-input
             name="name"
             value=${ifDefined(provider.name)}
             label=${msg("Name")}
             required
-            .errorMessages=${errors?.name}
+            .errorMessages=${errors.name}
         ></ak-text-input>
         <ak-form-element-horizontal
             name="authorizationFlow"
@@ -136,7 +132,7 @@ export function renderForm({
             <ak-flow-search
                 flowType=${FlowsInstancesListDesignationEnum.Authorization}
                 .currentFlow=${provider.authorizationFlow}
-                .errorMessages=${errors?.authorizationFlow}
+                .errorMessages=${errors.authorizationFlow}
                 required
             ></ak-flow-search>
             <p class="pf-c-form__helper-text">
@@ -151,14 +147,14 @@ export function renderForm({
                     label=${msg("ACS URL")}
                     value="${ifDefined(provider.acsUrl)}"
                     required
-                    .errorMessages=${errors?.acsUrl}
+                    .errorMessages=${errors.acsUrl}
                 ></ak-text-input>
                 <ak-text-input
                     label=${msg("Issuer")}
                     name="issuer"
                     value="${provider.issuer || "authentik"}"
                     required
-                    .errorMessages=${errors?.issuer}
+                    .errorMessages=${errors.issuer}
                     help=${msg("Also known as EntityID.")}
                 ></ak-text-input>
                 <ak-radio-input
@@ -180,16 +176,16 @@ export function renderForm({
                     help=${msg(
                         "Optional Single Logout Service URL to send logout responses to. If not set, no logout response will be sent.",
                     )}
-                    @input=${slsUrl.setHasSlsUrl}
+                    @input=${setHasSlsUrl}
                 ></ak-text-input>
-                ${slsUrl.hasSlsUrl
-                    ? renderHasSlsUrl(provider, slsBinding.hasPostBinding, slsBinding.setSlsBinding)
+                ${hasSlsUrl
+                    ? renderHasSlsUrl(provider, hasPostBinding, setSlsBinding)
                     : nothing}
                 <ak-text-input
                     name="audience"
                     label=${msg("Audience")}
                     value="${ifDefined(provider.audience)}"
-                    .errorMessages=${errors?.audience}
+                    .errorMessages=${errors.audience}
                 ></ak-text-input>
             </div>
         </ak-form-group>
@@ -233,7 +229,7 @@ export function renderForm({
                 <ak-form-element-horizontal label=${msg("Signing Certificate")} name="signingKp">
                     <ak-crypto-certificate-search
                         .certificate=${provider.signingKp}
-                        @input=${signingKp.setHasSigningKp}
+                        @input=${setHasSigningKp}
                     ></ak-crypto-certificate-search>
                     <p class="pf-c-form__helper-text">
                         ${msg(
@@ -241,7 +237,7 @@ export function renderForm({
                         )}
                     </p>
                 </ak-form-element-horizontal>
-                ${signingKp.hasSigningKp ? renderHasSigningKp(provider) : nothing}
+                ${hasSigningKp ? renderHasSigningKp(provider) : nothing}
 
                 <ak-form-element-horizontal
                     label=${msg("Verification Certificate")}
@@ -357,7 +353,7 @@ export function renderForm({
                     label=${msg("Assertion valid not before")}
                     value="${provider.assertionValidNotBefore || "minutes=-5"}"
                     required
-                    .errorMessages=${errors?.assertionValidNotBefore}
+                    .errorMessages=${errors.assertionValidNotBefore}
                     help=${msg("Configure the maximum allowed time drift for an assertion.")}
                 ></ak-text-input>
 
@@ -366,7 +362,7 @@ export function renderForm({
                     label=${msg("Assertion valid not on or after")}
                     value="${provider.assertionValidNotOnOrAfter || "minutes=5"}"
                     required
-                    .errorMessages=${errors?.assertionValidNotBefore}
+                    .errorMessages=${errors.assertionValidNotBefore}
                     help=${msg("Assertion not valid on or after current time + this value.")}
                 ></ak-text-input>
 
@@ -375,7 +371,7 @@ export function renderForm({
                     label=${msg("Session valid not on or after")}
                     value="${provider.sessionValidNotOnOrAfter || "minutes=86400"}"
                     required
-                    .errorMessages=${errors?.sessionValidNotOnOrAfter}
+                    .errorMessages=${errors.sessionValidNotOnOrAfter}
                     help=${msg("Session not valid on or after current time + this value.")}
                 ></ak-text-input>
 
@@ -383,7 +379,7 @@ export function renderForm({
                     name="defaultRelayState"
                     label=${msg("Default relay state")}
                     value="${provider.defaultRelayState || ""}"
-                    .errorMessages=${errors?.sessionValidNotOnOrAfter}
+                    .errorMessages=${errors.sessionValidNotOnOrAfter}
                     help=${msg(
                         "When using IDP-initiated logins, the relay state will be set to this value.",
                     )}

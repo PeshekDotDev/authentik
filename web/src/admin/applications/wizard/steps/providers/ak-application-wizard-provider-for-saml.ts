@@ -4,7 +4,7 @@ import "#elements/forms/FormGroup";
 import { ApplicationWizardProviderForm } from "./ApplicationWizardProviderForm.js";
 
 import { type AkCryptoCertificateSearch } from "#admin/common/ak-crypto-certificate-search";
-import { renderForm, SAMLProviderFormContext } from "#admin/providers/saml/SAMLProviderFormForm";
+import { renderForm } from "#admin/providers/saml/SAMLProviderFormForm";
 
 import { SAMLProvider, SpBindingEnum } from "@goauthentik/api";
 
@@ -33,8 +33,8 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
         // If SLS binding is not POST, ensure backchannel post logout is disabled
         return {
             ...super.formValues,
-            backchannelPostLogout: values.slsBinding === SpBindingEnum.Post
-          }
+            backchannelPostLogout: values.slsBinding === SpBindingEnum.Post,
+        };
     }
 
     renderForm() {
@@ -65,31 +65,18 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
             this.requestUpdate();
         };
 
-        const context: SAMLProviderFormContext = {
-            provider: this.wizard.provider
-                ? {
-                      ...(this.wizard.provider as SAMLProvider),
-                      backchannelPostLogout: this.backchannelPostLogout,
-                  }
-                : { backchannelPostLogout: this.backchannelPostLogout },
-            errors: this.wizard.errors?.provider ?? {},
-            signingKp: {
-                hasSigningKp: this.hasSigningKp,
-                setHasSigningKp,
-            },
-            slsUrl: {
-                hasSlsUrl: this.hasSlsUrl,
-                setHasSlsUrl,
-            },
-            slsBinding: {
-                hasPostBinding: this.hasPostBinding,
-                setSlsBinding,
-            },
-        };
-
         return html` <ak-wizard-title>${this.label}</ak-wizard-title>
             <form id="providerform" class="pf-c-form pf-m-horizontal" slot="form">
-                ${renderForm(context)}
+                ${renderForm({
+                    provider: this.wizard.provider as SAMLProvider,
+                    errors: this.wizard.errors?.provider,
+                    setHasSigningKp,
+                    hasSigningKp: this.hasSigningKp,
+                    setHasSlsUrl,
+                    hasSlsUrl: this.hasSlsUrl,
+                    setSlsBinding,
+                    hasPostBinding: this.hasPostBinding,
+                })}
             </form>`;
     }
 
