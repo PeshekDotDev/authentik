@@ -29,6 +29,23 @@ import { msg } from "@lit/localize";
 import { html, nothing } from "lit";
 import { ifDefined } from "lit/directives/if-defined.js";
 
+export interface SAMLProviderFormContext {
+    provider: Partial<SAMLProvider>;
+    errors: ValidationError;
+    signingKp: {
+        hasSigningKp: boolean;
+        setHasSigningKp: (ev: InputEvent) => void;
+    };
+    slsUrl: {
+        hasSlsUrl: boolean;
+        setHasSlsUrl: (ev: Event) => void;
+    };
+    slsBinding: {
+        hasPostBinding: boolean;
+        setSlsBinding: (ev: Event) => void;
+    };
+}
+
 const serviceProviderBindingOptions: RadioOption<SpBindingEnum>[] = [
     {
         label: msg("Redirect"),
@@ -56,15 +73,54 @@ function renderHasSigningKp(provider: Partial<SAMLProvider>) {
             ?checked=${provider.signResponse ?? false}
             help=${msg("When enabled, the SAML response will be signed.")}
         >
+        </ak-switch-input>
+        <ak-switch-input
+            name="signLogoutRequest"
+            label=${msg("Sign logout requests")}
+            ?checked=${provider?.signLogoutRequest ?? false}
+            help=${msg("When enabled, SAML logout requests will be signed.")}
+        >
         </ak-switch-input>`;
 }
 
-export function renderForm(
-    provider: Partial<SAMLProvider> = {},
-    errors: ValidationError,
-    setHasSigningKp: (ev: InputEvent) => void,
-    hasSigningKp: boolean,
+function renderHasSlsUrl(
+    provider?: Partial<SAMLProvider>,
+    hasPostBinding: boolean = false,
+    setSlsBinding?: (ev: Event) => void,
 ) {
+    return html`<ak-radio-input
+            label=${msg("SLS Binding")}
+            name="slsBinding"
+            .options=${serviceProviderBindingOptions}
+            .value=${provider?.slsBinding}
+            help=${msg(
+                "Determines how authentik sends the logout response back to the Service Provider.",
+            )}
+            @change=${setSlsBinding}
+        >
+        </ak-radio-input>
+        ${hasPostBinding
+            ? html`
+                  <ak-switch-input
+                      name="backchannelPostLogout"
+                      label=${msg("Backchannel Post Logout")}
+                      ?checked=${provider?.backchannelPostLogout ?? false}
+                      help=${msg(
+                          "When enabled, logout requests will be sent directly from the server to the Service Provider without user interaction. Only available with POST binding.",
+                      )}
+                  >
+                  </ak-switch-input>
+              `
+            : nothing}`;
+}
+
+export function renderForm({
+    provider,
+    errors,
+    signingKp,
+    slsUrl,
+    slsBinding,
+}: SAMLProviderFormContext) {
     return html` <ak-text-input
             name="name"
             value=${ifDefined(provider.name)}
@@ -117,6 +173,19 @@ export function renderForm(
                 >
                 </ak-radio-input>
                 <ak-text-input
+                    name="slsUrl"
+                    label=${msg("SLS URL")}
+                    value="${ifDefined(provider?.slsUrl)}"
+                    .errorMessages=${errors?.slsUrl ?? []}
+                    help=${msg(
+                        "Optional Single Logout Service URL to send logout responses to. If not set, no logout response will be sent.",
+                    )}
+                    @input=${slsUrl.setHasSlsUrl}
+                ></ak-text-input>
+                ${slsUrl.hasSlsUrl
+                    ? renderHasSlsUrl(provider, slsBinding.hasPostBinding, slsBinding.setSlsBinding)
+                    : nothing}
+                <ak-text-input
                     name="audience"
                     label=${msg("Audience")}
                     value="${ifDefined(provider.audience)}"
@@ -164,7 +233,7 @@ export function renderForm(
                 <ak-form-element-horizontal label=${msg("Signing Certificate")} name="signingKp">
                     <ak-crypto-certificate-search
                         .certificate=${provider.signingKp}
-                        @input=${setHasSigningKp}
+                        @input=${signingKp.setHasSigningKp}
                     ></ak-crypto-certificate-search>
                     <p class="pf-c-form__helper-text">
                         ${msg(
@@ -172,7 +241,7 @@ export function renderForm(
                         )}
                     </p>
                 </ak-form-element-horizontal>
-                ${hasSigningKp ? renderHasSigningKp(provider) : nothing}
+                ${signingKp.hasSigningKp ? renderHasSigningKp(provider) : nothing}
 
                 <ak-form-element-horizontal
                     label=${msg("Verification Certificate")}
