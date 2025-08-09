@@ -17,24 +17,24 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
     label = msg("Configure SAML Provider");
 
     @state()
-    hasSigningKp = false;
+    protected hasSigningKp = false;
 
     @state()
-    hasSlsUrl = false;
+    protected hasSlsUrl = false;
 
     @state()
-    hasPostBinding = false;
+    protected hasPostBinding = false;
 
     @state()
-    backchannelPostLogout = false;
+    protected backchannelPostLogout = false;
 
     get formValues() {
         const values = super.formValues;
         // If SLS binding is not POST, ensure backchannel post logout is disabled
-        if (values.slsBinding !== SpBindingEnum.Post) {
-            values.backchannelPostLogout = false;
-        }
-        return values;
+        return {
+            ...super.formValues,
+            backchannelPostLogout: values.slsBinding === SpBindingEnum.Post
+          }
     }
 
     renderForm() {
