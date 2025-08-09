@@ -1,5 +1,6 @@
 ---
 title: SAML Provider
+authentik_version: "2025.8.0"
 ---
 
 This provider allows you to integrate enterprise software using the SAML2 protocol. It supports signed requests and uses [property mappings](../property-mappings/index.md#saml-property-mappings) to determine which fields are exposed and what values they return. This makes it possible to expose vendor-specific fields.
@@ -36,27 +37,9 @@ You can select a custom SAML Property Mapping to control how the NameID field is
 Keep in mind that with the default settings, users are free to change their email addresses. As such it is recommended to use `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`, as this cannot be changed.
 :::
 
-## SAML IDP Initiated Single Logout (SLO)
+## Single Logout Service URL
 
-authentik supports SAML IDP Initiated Single Logout (SLO), which allows users to log out of authentik and all connected SAML service providers simultaneously.
-
-### Logout Methods
-
-When users log out of authentik, they are automatically logged out of all SAML service providers accessed during their session. authentik supports three logout methods:
-
-- **Iframe-based front-channel logout** (default) - Performs parallel logout requests using hidden iframes
-- **Redirect-based front-channel logout** - Sequential logout using browser redirects (legacy)
-- **Back-channel logout** - Server-to-server POST requests without user interaction
-
-:::info
-Front-channel logouts occur in the user's browser, while back-channel logouts happen directly between servers and work even when sessions are terminated administratively.
-:::
-
-### Configuration
-
-#### Single Logout Service URL
-
-To enable SAML Single Logout, configure the **Single Logout Service (SLS) URL** in your SAML provider settings. This is the service provider's endpoint where authentik sends logout requests.
+The Single Logout Service URL is the service provider's endpoint where authentik sends logout requests. If you want to enable [SAML Single Logout](./IDP-initiated-single-logout.md), this field is required.
 
 1. In your SAML provider, set the **SLS URL** field to your service provider's logout endpoint
 2. Choose the appropriate **SLS Binding**:
@@ -67,14 +50,6 @@ To enable SAML Single Logout, configure the **Single Logout Service (SLS) URL** 
 When using POST binding, you can enable **Backchannel Post Logout** for server-to-server logout. This ensures users are logged out even when their session is administratively terminated.
 :::
 
-#### Logout Stage Configuration
-
-The front-channel logout behavior is controlled by the [User Logout stage](../../flows-stages/stages/user_logout.md) in your logout flow. By default, authentik uses iframes for efficient parallel logout. To switch to the legacy sequential redirect method:
-
-1. Navigate to **Flows & Stages** → **Stages**
-2. Edit your **User Logout** stage
-3. Enable **Redirect based SAML Single Logout**
-
-### Signing Logout Requests
+## Signing Logout Requests
 
 For enhanced security, enable **Sign logout requests** in your SAML provider's settings. This signs all logout requests sent to service providers using the configured signing certificate.

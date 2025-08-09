@@ -1,5 +1,6 @@
 ---
 title: User logout stage
+authentik_version: "2025.8.0"
 ---
 
 The User Logout stage terminates the user's session in authentik and triggers Single Logout (SLO) for configured service providers.
@@ -8,12 +9,12 @@ The User Logout stage terminates the user's session in authentik and triggers Si
 
 When users have authenticated to external applications through authentik, the User Logout stage automatically logs them out of those applications. This is supported for:
 
-- **SAML providers** - Single Logout (SLO) support
-- **OAuth2/OIDC providers** - Backchannel logout support
+- **SAML providers** - [Single Logout (SLO) support](../../providers/saml/IDP-initiated-single-logout.md)
+- **OAuth2/OIDC providers** - [Backchannel logout support](../../providers/oauth2/backchannel-logout.mdx)
 
 OIDC providers use back-channel logout and require no additional configuration to the User Logout stage. SAML providers may use front-channel logout, which can be configured in the User Logout stage.
 
-### SAML Front-Channel Logout
+## SAML Front-Channel Logout
 
 The stage supports two front-channel logout modes for SAML providers:
 
