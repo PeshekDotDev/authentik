@@ -5,7 +5,7 @@ import { BaseStage } from "#flow/stages/base";
 import { FlowChallengeResponseRequest, SAMLIframeLogoutChallenge } from "@goauthentik/api";
 
 import { msg } from "@lit/localize";
-import { css, CSSResult, html, PropertyValues, TemplateResult } from "lit";
+import { css, CSSResult, html, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 
 import PFButton from "@patternfly/patternfly/components/Button/button.css";
@@ -28,6 +28,18 @@ interface LogoutURLData {
     binding?: string;
 }
 
+function renderStatusIcon(status: string): TemplateResult | typeof nothing {
+    switch (status) {
+        case "pending":
+            return html`<i class="fas fa-spinner pf-c-spinner status-icon status-pending"></i>`;
+        case "success":
+            return html`<i class="fas fa-check-circle status-icon status-success"></i>`;
+        case "error":
+            return html`<i class="fas fa-times-circle status-icon status-error"></i>`;
+    }
+    return nothing;
+}
+
 @customElement("ak-stage-saml-iframe-logout")
 export class SAMLIframeLogoutStage extends BaseStage<
     SAMLIframeLogoutChallenge,
@@ -38,6 +50,17 @@ export class SAMLIframeLogoutStage extends BaseStage<
 
     @state()
     protected completedCount = 0;
+
+    #iframeTimeouts = new Map<number, ReturnType<typeof setTimeout>>();
+    #moveOnTimeout?: ReturnType<typeof setTimeout>;
+
+    public override disconnectedCallback(): void {
+        super.disconnectedCallback();
+        this.#iframeTimeouts.forEach((id) => {
+            clearTimeout(id);
+        });
+        clearTimeout(this.#moveOnTimeout);
+    }
 
     public static styles: CSSResult[] = [
         PFBase,
@@ -84,12 +107,6 @@ export class SAMLIframeLogoutStage extends BaseStage<
     public override firstUpdated(changedProperties: PropertyValues): void {
         super.firstUpdated(changedProperties);
 
-        // If no logout URLs, immediately submit
-        if (!this.challenge.logoutUrls?.length) {
-            this.submitForm(new SubmitEvent("submit"));
-            return;
-        }
-
         // Initialize status tracking
         const logoutUrls = this.challenge.logoutUrls as LogoutURLData[];
 
@@ -111,7 +128,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
         });
 
         // Set a final timeout to complete even if some iframes don't respond
-        setTimeout(() => {
+        this.#moveOnTimeout = setTimeout(() => {
             if (this.completedCount < (this.challenge.logoutUrls?.length || 0)) {
                 const submitEvent = new SubmitEvent("submit");
                 this.submitForm(submitEvent);
@@ -132,10 +149,15 @@ export class SAMLIframeLogoutStage extends BaseStage<
             this.handleLogoutComplete(index, false);
             iframe.remove();
         }, 5000); // 5 second timeout
+        this.#iframeTimeouts.set(index, timeoutId);
 
         // Try to detect when iframe loads (may not work for cross-origin)
         iframe.addEventListener("load", () => {
-            clearTimeout(timeoutId);
+            const timeout = this.#iframeTimeouts.get(index);
+            if (timeout) {
+                clearTimeout(timeout);
+                this.#iframeTimeouts.delete(index);
+            }
             this.handleLogoutComplete(index, true);
             iframe.remove();
         });
@@ -187,19 +209,6 @@ export class SAMLIframeLogoutStage extends BaseStage<
         }
     }
 
-    protected renderStatusIcon(status: string): TemplateResult {
-        switch (status) {
-            case "pending":
-                return html`<i class="fas fa-spinner pf-c-spinner status-icon status-pending"></i>`;
-            case "success":
-                return html`<i class="fas fa-check-circle status-icon status-success"></i>`;
-            case "error":
-                return html`<i class="fas fa-times-circle status-icon status-error"></i>`;
-            default:
-                return html``;
-        }
-    }
-
     protected renderProgress(): TemplateResult {
         const total = this.challenge.logoutUrls?.length || 0;
         const percentage = total > 0 ? Math.round((this.completedCount / total) * 100) : 0;
@@ -239,7 +248,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
                     ${this.logoutStatuses.map(
                         (status) => html`
                             <div class="provider-status">
-                                ${this.renderStatusIcon(status.status)}
+                                ${renderStatusIcon(status.status)}
                                 <span>${status.providerName}</span>
                             </div>
                         `,
