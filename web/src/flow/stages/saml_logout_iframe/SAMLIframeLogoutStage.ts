@@ -39,7 +39,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
     @state()
     protected completedCount = 0;
 
-    static styles: CSSResult[] = [
+    public static styles: CSSResult[] = [
         PFBase,
         PFLogin,
         PFForm,
@@ -48,9 +48,6 @@ export class SAMLIframeLogoutStage extends BaseStage<
         PFTitle,
         PFProgress,
         css`
-            .ak-hidden {
-                display: none;
-            }
             .provider-status {
                 margin-bottom: 1rem;
                 display: flex;
@@ -84,27 +81,30 @@ export class SAMLIframeLogoutStage extends BaseStage<
         `,
     ];
 
-    firstUpdated(changedProperties: PropertyValues): void {
+    public override firstUpdated(changedProperties: PropertyValues): void {
         super.firstUpdated(changedProperties);
 
         // If no logout URLs, immediately submit
-        if (!this.challenge.logoutUrls || this.challenge.logoutUrls.length === 0) {
-            const submitEvent = new SubmitEvent("submit");
-            this.submitForm(submitEvent);
+        if (!this.challenge.logoutUrls?.length) {
+            this.submitForm(new SubmitEvent("submit"));
             return;
         }
 
         // Initialize status tracking
-        this.logoutStatuses = (this.challenge.logoutUrls as LogoutURLData[]).map((url) => ({
-            providerName: url.provider_name || "Unknown Provider",
-            status: "pending" as const,
-        }));
+        const logoutUrls = this.challenge.logoutUrls as LogoutURLData[];
+
+        this.logoutStatuses = logoutUrls.map(
+            (url): LogoutStatus => ({
+                providerName: url.provider_name || "Unknown Provider",
+                status: "pending",
+            }),
+        );
 
         // Start the logout process
         this.performLogouts();
     }
 
-    async performLogouts(): Promise<void> {
+    protected async performLogouts(): Promise<void> {
         // Create iframes for each logout URL
         (this.challenge.logoutUrls as LogoutURLData[] | undefined)?.forEach((logoutData, index) => {
             this.createLogoutIframe(logoutData, index);
@@ -119,7 +119,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
         }, 6000); // 6 seconds (5 second timeout + 1 second buffer)
     }
 
-    createLogoutIframe(logoutData: LogoutURLData, index: number): void {
+    protected createLogoutIframe(logoutData: LogoutURLData, index: number): void {
         const iframe = document.createElement("iframe");
         iframe.style.display = "none";
         iframe.name = `saml-logout-${index}`;
@@ -167,7 +167,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
         }
     }
 
-    handleLogoutComplete(index: number, success: boolean): void {
+    protected handleLogoutComplete(index: number, success: boolean): void {
         // Update status
         const statuses = [...this.logoutStatuses];
         statuses[index] = {
@@ -187,7 +187,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
         }
     }
 
-    renderStatusIcon(status: string): TemplateResult {
+    protected renderStatusIcon(status: string): TemplateResult {
         switch (status) {
             case "pending":
                 return html`<i class="fas fa-spinner pf-c-spinner status-icon status-pending"></i>`;
@@ -200,7 +200,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
         }
     }
 
-    renderProgress(): TemplateResult {
+    protected renderProgress(): TemplateResult {
         const total = this.challenge.logoutUrls?.length || 0;
         const percentage = total > 0 ? Math.round((this.completedCount / total) * 100) : 0;
 
@@ -225,7 +225,7 @@ export class SAMLIframeLogoutStage extends BaseStage<
         `;
     }
 
-    render(): TemplateResult {
+    public override render(): TemplateResult {
         // If no logout URLs, show loading (will auto-submit)
         if (!this.challenge.logoutUrls || this.challenge.logoutUrls.length === 0) {
             return html`<ak-flow-card .challenge=${this.challenge} loading></ak-flow-card>`;

@@ -5,7 +5,7 @@ import { BaseStage } from "#flow/stages/base";
 import { FlowChallengeResponseRequest, SAMLLogoutChallenge } from "@goauthentik/api";
 
 import { msg, str } from "@lit/localize";
-import { css, CSSResult, html, nothing, PropertyValues, TemplateResult } from "lit";
+import { CSSResult, html, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { createRef, ref, Ref } from "lit/directives/ref.js";
@@ -21,21 +21,9 @@ import PFBase from "@patternfly/patternfly/patternfly-base.css";
 export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChallengeResponseRequest> {
     #formRef: Ref<HTMLFormElement> = createRef();
 
-    static styles: CSSResult[] = [
-        PFBase,
-        PFLogin,
-        PFForm,
-        PFButton,
-        PFFormControl,
-        PFTitle,
-        css`
-            .ak-hidden {
-                display: none;
-            }
-        `,
-    ];
+    public static styles: CSSResult[] = [PFBase, PFLogin, PFForm, PFButton, PFFormControl, PFTitle];
 
-    firstUpdated(changedProperties: PropertyValues): void {
+    public override firstUpdated(changedProperties: PropertyValues): void {
         super.firstUpdated(changedProperties);
 
         // If complete, auto-submit to continue flow
@@ -51,8 +39,11 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
         }
 
         // If redirect binding, perform the redirect
-        if (this.challenge.binding === "redirect" && this.challenge.redirectUrl) {
-            window.location.href = this.challenge.redirectUrl;
+        if (this.challenge.binding === "redirect") {
+            if (!this.challenge.redirectUrl) {
+                throw new TypeError(`Binding challenge does not a have a redirect URL`);
+            }
+            requestAnimationFrame(() => window.location.assign(this.challenge.redirectUrl!));
         }
     }
 
@@ -71,12 +62,15 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
             </ak-flow-card>`;
         }
 
-        // For redirect binding, just show loading and redirect
-        if (this.challenge.binding === "redirect" && this.challenge.redirectUrl) {
-            window.location.href = this.challenge.redirectUrl;
+        // For redirect binding, just show loading and firstUpdated will redirect for us
+        if (this.challenge.binding === "redirect") {
             return html`<ak-flow-card .challenge=${this.challenge} loading>
                 <span slot="title">${msg(str`Redirecting to SAML provider ${providerName}`)}</span>
             </ak-flow-card>`;
+        }
+
+        if (this.challenge.binding !== "post") {
+            throw new TypeError(`Unknown challenge binding type ${this.challenge.binding}`);
         }
 
         // For POST binding, render auto-submit form

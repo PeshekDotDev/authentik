@@ -45,7 +45,7 @@ export class UserLogoutStageForm extends BaseStageForm<UserLogoutStage> {
             <ak-switch-input
                 name="samlRedirectLogout"
                 label=${msg("Redirect based SAML Single Logout")}
-                ?checked=${this.instance?.samlRedirectLogout ?? false}
+                ?checked=${!!this.instance?.samlRedirectLogout}
                 help=${msg(
                     "When enabled, SAML Single Logout will use a redirect chain instead of IFrames",
                 )}
