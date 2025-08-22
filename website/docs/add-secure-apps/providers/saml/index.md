@@ -41,7 +41,7 @@ Keep in mind that with the default settings, users are free to change their emai
 
 The **Single Logout Service URL** is the service provider's endpoint to which authentik sends logout requests. If you want to enable [SAML IDP-initiated single logout](./IDP-initiated-single-logout.md), this field is required.
 
-1. In your SAML provider, set the **SLS URL** field to your service provider's logout endpoint
+1. In your SAML provider, set the **SLS URL** field to your service provider's logout endpoint.
 2. Choose the appropriate **SLS Binding**:
     - **Redirect** - Uses HTTP redirects (front-channel only)
     - **POST** - Supports both front-channel and back-channel
