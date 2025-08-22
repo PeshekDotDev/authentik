@@ -19,7 +19,7 @@ When users log out of authentik, they are automatically logged out of all SAML s
 Front-channel logouts occur in the user's browser, while back-channel logouts happen directly between servers and work even when sessions are terminated administratively.
 :::
 
-### Logout Stage Configuration
+### Logout stage configuration
 
 The front-channel logout behavior is controlled by the [User Logout stage](../../flows-stages/stages/user_logout.md) in your logout flow. By default, authentik uses iframes for efficient parallel logout. To switch to the legacy sequential redirect method:
 
