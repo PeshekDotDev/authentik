@@ -7,7 +7,7 @@ authentik_version: "2025.8.0"
 authentik supports SAML IDP Initiated Single Logout (SLO), which allows users to log out of authentik and all connected SAML service providers simultaneously.
 In order to use this feature, you must set a [Single Logout Service URL](./index.md#single-logout-service-url) in your SAML Provider settings.
 
-## Logout Methods
+## Logout methods
 
 When users log out of authentik, they are automatically logged out of all SAML service providers accessed during their session. authentik supports three logout methods:
 
