@@ -25,8 +25,8 @@ You can select a custom SAML Property Mapping to control how the NameID field is
 | Value                                 | NameID Format                                                          | Fallback              |
 | ------------------------------------- | ---------------------------------------------------------------------- | --------------------- |
 | Hashed user ID                        | `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`                 | N/A                   |
-| User's `distinguishedName` attribute¹ | `urn:oasis:names:tc:SAML:2.0:nameid-format:X509SubjectName`            | Persistent identifier |
-| User Principal Name (UPN)¹            | `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName` | Persistent identifier |
+| User's `distinguishedName` attribute* | `urn:oasis:names:tc:SAML:2.0:nameid-format:X509SubjectName`            | Persistent identifier |
+| User Principal Name (UPN)*            | `urn:oasis:names:tc:SAML:2.0:nameid-format:WindowsDomainQualifiedName` | Persistent identifier |
 | User's session ID                     | `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`                  | N/A                   |
 | User's email address                  | `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`               | N/A                   |
 
