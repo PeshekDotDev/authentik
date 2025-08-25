@@ -5,7 +5,7 @@ authentik_version: "2025.8.0"
 
 The User Logout stage terminates the user's session in authentik and, for configured service providers, triggers Single Logout (SLO).
 
-## Provider Logout Integration
+## Provider logout integration
 
 When users have authenticated to external applications through authentik, the User Logout stage automatically logs them out of those applications. This is supported for:
 
