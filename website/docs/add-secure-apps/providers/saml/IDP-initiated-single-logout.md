@@ -21,7 +21,7 @@ Front-channel logouts occur in the user's browser, while back-channel logouts ha
 
 ### Logout stage configuration
 
-The front-channel logout behavior is controlled by the [User Logout stage](../../flows-stages/stages/user_logout.md) in your logout flow. By default, authentik uses iframes for efficient parallel logout. To switch to the legacy sequential redirect method:
+The front-channel logout behavior is controlled by the [User Logout stage](../../flows-stages/stages/user_logout.md) in your logout flow. By default, authentik uses iframes for efficient parallel logout. Follow these steps to switch to the legacy sequential redirect method:
 
 1. Navigate to **Flows & Stages** > **Stages**.
 2. Edit your **User Logout** stage.
