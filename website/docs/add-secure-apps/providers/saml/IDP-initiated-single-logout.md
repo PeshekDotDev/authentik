@@ -1,5 +1,5 @@
 ---
-title: SAML IDP Initiated Single Logout
+title: SAML IDP-initiated single logout
 description: Configure SAML IDP Initiated Single Logout for SAML Providers
 authentik_version: "2025.8.0"
 ---
