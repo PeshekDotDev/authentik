@@ -14,7 +14,7 @@ When users have authenticated to external applications through authentik, the Us
 
 OIDC providers use back-channel logout and require no additional configuration to the User Logout stage. SAML providers may use front-channel logout, which can be configured in the User Logout stage.
 
-## SAML Front-Channel Logout
+## SAML front-channel logout
 
 The User Logout stage supports two front-channel logout modes for SAML providers:
 
