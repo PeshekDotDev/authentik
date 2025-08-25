@@ -20,7 +20,7 @@ The metadata download link can also be copied with a button on the provider over
 
 ## Name ID
 
-You can select a custom SAML Property Mapping to control how the NameID field is generated. When using the default configuration, authentik determines the NameID value based on the requested format:
+You can select a custom SAML Property Mapping to control how the NameID field is mapped. When using the default configuration, authentik determines the NameID value based on the requested format:
 
 | Value                                 | NameID Format                                                          | Fallback              |
 | ------------------------------------- | ---------------------------------------------------------------------- | --------------------- |
