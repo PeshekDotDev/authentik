@@ -1,6 +1,5 @@
 ---
 title: SAML Provider
-authentik_version: "2025.8.0"
 ---
 
 This provider allows you to integrate enterprise software using the SAML2 protocol. It supports signed requests and uses [property mappings](../property-mappings/index.md#saml-property-mappings) to determine which fields are exposed and what values they return. This makes it possible to expose vendor-specific fields.
