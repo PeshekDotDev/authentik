@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: authentik
-  version: 2025.6.4
+  version: 2025.10.0-rc1
   description: Making authentication simple.
   contact:
     email: hello@goauthentik.io
@@ -104,6 +104,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SettingsRequest'
+        required: true
       security:
       - authentik: []
       responses:
@@ -6022,7 +6023,7 @@ paths:
   /core/users/{id}/recovery/:
     post:
       operationId: core_users_recovery_create
-      description: Create a temporary link that a user can use to recover their accounts
+      description: Create a temporary link that a user can use to recover their account
       parameters:
       - in: path
         name: id
@@ -6056,7 +6057,8 @@ paths:
   /core/users/{id}/recovery_email/:
     post:
       operationId: core_users_recovery_email_create
-      description: Create a temporary link that a user can use to recover their accounts
+      description: Send an email with a temporary link that a user can use to recover
+        their account
       parameters:
       - in: query
         name: email_stage
@@ -44197,12 +44199,21 @@ components:
         default_locale:
           type: string
           readOnly: true
+        flags:
+          type: object
+          properties:
+            policies_buffered_access_view:
+              type: boolean
+          required:
+          - policies_buffered_access_view
+          readOnly: true
       required:
       - branding_custom_css
       - branding_favicon
       - branding_logo
       - branding_title
       - default_locale
+      - flags
       - matched_domain
       - ui_footer_links
       - ui_theme
@@ -49371,6 +49382,10 @@ components:
           nullable: true
           description: Configure additional headers to be sent. Mapping should return
             a dictionary of key-value pairs
+        email_subject_prefix:
+          type: string
+        email_template:
+          type: string
         send_once:
           type: boolean
           description: Only send notification once, for example when sending a webhook
@@ -49410,6 +49425,11 @@ components:
           nullable: true
           description: Configure additional headers to be sent. Mapping should return
             a dictionary of key-value pairs
+        email_subject_prefix:
+          type: string
+        email_template:
+          type: string
+          minLength: 1
         send_once:
           type: boolean
           description: Only send notification once, for example when sending a webhook
@@ -54507,6 +54527,11 @@ components:
           nullable: true
           description: Configure additional headers to be sent. Mapping should return
             a dictionary of key-value pairs
+        email_subject_prefix:
+          type: string
+        email_template:
+          type: string
+          minLength: 1
         send_once:
           type: boolean
           description: Only send notification once, for example when sending a webhook
@@ -55876,6 +55901,13 @@ components:
           maximum: 2147483647
           minimum: 1
           description: Default token length
+        flags:
+          type: object
+          properties:
+            policies_buffered_access_view:
+              type: boolean
+          required:
+          - policies_buffered_access_view
     PatchedSourceStageRequest:
       type: object
       description: SourceStage Serializer
@@ -60201,6 +60233,15 @@ components:
           maximum: 2147483647
           minimum: 1
           description: Default token length
+        flags:
+          type: object
+          properties:
+            policies_buffered_access_view:
+              type: boolean
+          required:
+          - policies_buffered_access_view
+      required:
+      - flags
     SettingsRequest:
       type: object
       description: Settings Serializer
@@ -60254,6 +60295,15 @@ components:
           maximum: 2147483647
           minimum: 1
           description: Default token length
+        flags:
+          type: object
+          properties:
+            policies_buffered_access_view:
+              type: boolean
+          required:
+          - policies_buffered_access_view
+      required:
+      - flags
     SeverityEnum:
       enum:
       - notice
@@ -62613,4 +62663,4 @@ components:
       type: http
       scheme: bearer
 servers:
-- url: /api/v3/
+- url: /api/v3

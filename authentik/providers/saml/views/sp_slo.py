@@ -20,10 +20,10 @@ from authentik.providers.saml.exceptions import CannotHandleAssertion
 from authentik.providers.saml.models import SAMLProvider
 from authentik.providers.saml.processors.logout_request_parser import LogoutRequestParser
 from authentik.providers.saml.views.flows import (
+    PLAN_CONTEXT_SAML_LOGOUT_REQUEST,
     REQUEST_KEY_RELAY_STATE,
     REQUEST_KEY_SAML_REQUEST,
     REQUEST_KEY_SAML_RESPONSE,
-    SESSION_KEY_LOGOUT_REQUEST,
 )
 
 LOGGER = get_logger()
@@ -33,6 +33,10 @@ class SPInitiatedSLOView(PolicyAccessView):
     """Handle SP-initiated SAML Single Logout requests"""
 
     flow: Flow
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.plan_context = {}
 
     def resolve_provider_application(self):
         self.application = get_object_or_404(Application, slug=self.kwargs["application_slug"])
@@ -61,6 +65,7 @@ class SPInitiatedSLOView(PolicyAccessView):
             request,
             {
                 PLAN_CONTEXT_APPLICATION: self.application,
+                **self.plan_context,
             },
         )
         plan.append_stage(in_memory_stage(SessionEndStage))
@@ -117,7 +122,7 @@ class SPInitiatedSLOBindingRedirectView(SPInitiatedSLOView):
                 self.request.GET[REQUEST_KEY_SAML_REQUEST],
                 relay_state=self.request.GET.get(REQUEST_KEY_RELAY_STATE, None),
             )
-            self.request.session[SESSION_KEY_LOGOUT_REQUEST] = logout_request
+            self.plan_context[PLAN_CONTEXT_SAML_LOGOUT_REQUEST] = logout_request
 
             LOGGER.info(
                 "SP-initiated logout request received (Redirect)",
@@ -185,7 +190,7 @@ class SPInitiatedSLOBindingPOSTView(SPInitiatedSLOView):
                 payload[REQUEST_KEY_SAML_REQUEST],
                 relay_state=payload.get(REQUEST_KEY_RELAY_STATE, None),
             )
-            self.request.session[SESSION_KEY_LOGOUT_REQUEST] = logout_request
+            self.plan_context[PLAN_CONTEXT_SAML_LOGOUT_REQUEST] = logout_request
 
             LOGGER.info(
                 "SP-initiated logout request received (POST)",

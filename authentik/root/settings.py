@@ -4,13 +4,12 @@ import importlib
 from collections import OrderedDict
 from hashlib import sha512
 from pathlib import Path
-from tempfile import gettempdir
 
 import orjson
 from sentry_sdk import set_tag
 from xmlsec import enable_debug_trace
 
-from authentik import __version__
+from authentik import authentik_version
 from authentik.lib.config import CONFIG, django_db_config, redis_url
 from authentik.lib.logging import get_logger_config, structlog_configure
 from authentik.lib.sentry import sentry_init
@@ -144,13 +143,13 @@ GUARDIAN_MONKEY_PATCH_USER = False
 SPECTACULAR_SETTINGS = {
     "TITLE": "authentik",
     "DESCRIPTION": "Making authentication simple.",
-    "VERSION": __version__,
+    "VERSION": authentik_version(),
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api/v([0-9]+(beta)?)",
     "SCHEMA_PATH_PREFIX_TRIM": True,
     "SERVERS": [
         {
-            "url": "/api/v3/",
+            "url": "/api/v3",
         },
     ],
     "CONTACT": {
@@ -266,6 +265,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "authentik.core.middleware.ImpersonateMiddleware",
+    "authentik.rbac.middleware.InitialPermissionsMiddleware",
 ]
 MIDDLEWARE_LAST = [
     "django_prometheus.middleware.PrometheusAfterMiddleware",
@@ -368,6 +368,9 @@ DRAMATIQ = {
     "broker_class": "authentik.tasks.broker.Broker",
     "channel_prefix": "authentik",
     "task_model": "authentik.tasks.models.Task",
+    "lock_purge_interval": timedelta_from_string(
+        CONFIG.get("worker.lock_purge_interval")
+    ).total_seconds(),
     "task_purge_interval": timedelta_from_string(
         CONFIG.get("worker.task_purge_interval")
     ).total_seconds(),
@@ -424,7 +427,6 @@ DRAMATIQ = {
         (
             "authentik.tasks.middleware.MetricsMiddleware",
             {
-                "multiproc_dir": str(Path(gettempdir()) / "authentik_prometheus_tmp"),
                 "prefix": "authentik",
             },
         ),
@@ -567,7 +569,7 @@ if DEBUG:
     enable_debug_trace(True)
 
 
-CONFIG.log("info", "Booting authentik", version=__version__)
+CONFIG.log("info", "Booting authentik", version=authentik_version())
 
 # Load subapps's settings
 _filter_and_update(SHARED_APPS + TENANT_APPS)
