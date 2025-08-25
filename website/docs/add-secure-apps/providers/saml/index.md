@@ -30,7 +30,7 @@ You can select a custom SAML Property Mapping to control how the NameID field is
 | User's session ID                     | `urn:oasis:names:tc:SAML:2.0:nameid-format:transient`                  | N/A                   |
 | User's email address                  | `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress`               | N/A                   |
 
-¹ These attributes are typically set by LDAP sources.
+* These attributes are typically set by LDAP sources.
 
 :::warning
 Keep in mind that with the default settings, users are free to change their email addresses. As such it is recommended to use `urn:oasis:names:tc:SAML:2.0:nameid-format:persistent`, as this cannot be changed.
