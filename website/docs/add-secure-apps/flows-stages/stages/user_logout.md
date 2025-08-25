@@ -16,7 +16,7 @@ OIDC providers use back-channel logout and require no additional configuration t
 
 ## SAML Front-Channel Logout
 
-The stage supports two front-channel logout modes for SAML providers:
+The User Logout stage supports two front-channel logout modes for SAML providers:
 
 - **Iframe-based front-channel logout** (default) - Performs parallel logout requests using hidden iframes
 - **Redirect-based front-channel logout** - Sequential logout using browser redirects (legacy)
