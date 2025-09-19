@@ -50,10 +50,10 @@ export function renderForm({ provider = {}, errors = {}, brand }: LDAPProviderFo
     return html`
         <ak-text-input
             name="name"
-            placeholder=${msg("Provider name")}
-            value=${ifDefined(provider.name)}
-            label=${msg("Name")}
-            .errorMessages=${errors.name}
+            placeholder=${msg("Provider name...")}
+            value=${ifDefined(provider?.name)}
+            label=${msg("Provider Name")}
+            .errorMessages=${errors?.name}
             required
             help=${msg("Method's display Name.")}
         ></ak-text-input>
@@ -142,7 +142,9 @@ export function renderForm({ provider = {}, errors = {}, brand }: LDAPProviderFo
                     .errorMessages=${errors.certificate}
                 >
                     <ak-crypto-certificate-search
-                        certificate=${ifDefined(provider.certificate ?? nothing)}
+                        label=${msg("Certificate")}
+                        placeholder=${msg("Select a certificate...")}
+                        certificate=${ifDefined(provider?.certificate ?? nothing)}
                         name="certificate"
                     >
                     </ak-crypto-certificate-search>

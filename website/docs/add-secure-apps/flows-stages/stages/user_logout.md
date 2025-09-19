@@ -1,6 +1,5 @@
 ---
 title: User logout stage
-authentik_version: "2025.8.0"
 ---
 
 The User Logout stage terminates the user's session in authentik and, for configured service providers, triggers Single Logout (SLO).

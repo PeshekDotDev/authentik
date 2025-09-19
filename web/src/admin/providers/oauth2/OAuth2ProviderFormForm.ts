@@ -21,6 +21,7 @@ import { oauth2SourcesProvider, oauth2SourcesSelector } from "./OAuth2Sources.js
 import { ascii_letters, digits, randomString } from "#common/utils";
 
 import { RadioOption } from "#elements/forms/Radio";
+import { ifPresent } from "#elements/utils/attributes";
 
 import {
     ClientTypeEnum,
@@ -138,9 +139,10 @@ export function renderForm({
 }: OAuth2ProviderFormProps) {
     return html` <ak-text-input
             name="name"
-            label=${msg("Name")}
-            value=${ifDefined(provider.name)}
-            .errorMessages=${errors.name}
+            placeholder=${msg("Provider name...")}
+            label=${msg("Provider Name")}
+            value=${ifDefined(provider?.name)}
+            .errorMessages=${errors?.name}
             required
         ></ak-text-input>
 
@@ -150,6 +152,8 @@ export function renderForm({
             required
         >
             <ak-flow-search
+                label=${msg("Authorization flow")}
+                placeholder=${msg("Select an authorization flow...")}
                 flowType=${FlowsInstancesListDesignationEnum.Authorization}
                 .currentFlow=${provider.authorizationFlow}
                 .errorMessages=${errors.authorizationFlow}
@@ -226,7 +230,9 @@ export function renderForm({
                 <ak-form-element-horizontal label=${msg("Signing Key")} name="signingKey">
                     <!-- NOTE: 'null' cast to 'undefined' on signingKey to satisfy Lit requirements -->
                     <ak-crypto-certificate-search
-                        certificate=${ifDefined(provider.signingKey ?? undefined)}
+                        label=${msg("Signing Key")}
+                        placeholder=${msg("Select a signing key...")}
+                        certificate=${ifPresent(provider?.signingKey)}
                         singleton
                     ></ak-crypto-certificate-search>
                     <p class="pf-c-form__helper-text">${msg("Key used to sign the tokens.")}</p>
@@ -234,7 +240,9 @@ export function renderForm({
                 <ak-form-element-horizontal label=${msg("Encryption Key")} name="encryptionKey">
                     <!-- NOTE: 'null' cast to 'undefined' on encryptionKey to satisfy Lit requirements -->
                     <ak-crypto-certificate-search
-                        certificate=${ifDefined(provider.encryptionKey ?? undefined)}
+                        label=${msg("Encryption Key")}
+                        placeholder=${msg("Select an encryption key...")}
+                        certificate=${ifPresent(provider?.encryptionKey)}
                     ></ak-crypto-certificate-search>
                     <p class="pf-c-form__helper-text">${msg("Key used to encrypt the tokens.")}</p>
                 </ak-form-element-horizontal>
@@ -248,6 +256,8 @@ export function renderForm({
                     label=${msg("Authentication flow")}
                 >
                     <ak-flow-search
+                        label=${msg("Authentication flow")}
+                        placeholder=${msg("Select an authentication flow...")}
                         flowType=${FlowsInstancesListDesignationEnum.Authentication}
                         .currentFlow=${provider.authenticationFlow}
                     ></ak-flow-search>
@@ -263,6 +273,8 @@ export function renderForm({
                     required
                 >
                     <ak-flow-search
+                        label=${msg("Invalidation flow")}
+                        placeholder=${msg("Select an invalidation flow...")}
                         flowType=${FlowsInstancesListDesignationEnum.Invalidation}
                         .currentFlow=${provider.invalidationFlow}
                         defaultFlowSlug="default-provider-invalidation-flow"
