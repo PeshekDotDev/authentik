@@ -64,8 +64,7 @@ class SAMLFlowFinalView(ChallengeStageView):
             if auth_session:
                 # Delete any existing SAML session for this session_index and provider
                 SAMLSession.objects.filter(
-                    session_index=processor.session_index,
-                    provider=provider
+                    session_index=processor.session_index, provider=provider
                 ).delete()
 
                 SAMLSession.objects.update_or_create(
