@@ -62,6 +62,12 @@ class SAMLFlowFinalView(ChallengeStageView):
             # Create SAMLSession to track this login
             auth_session = AuthenticatedSession.from_request(request, request.user)
             if auth_session:
+                # Delete any existing SAML session for this session_index and provider
+                SAMLSession.objects.filter(
+                    session_index=processor.session_index,
+                    provider=provider
+                ).delete()
+
                 SAMLSession.objects.update_or_create(
                     session_index=processor.session_index,
                     provider=provider,
