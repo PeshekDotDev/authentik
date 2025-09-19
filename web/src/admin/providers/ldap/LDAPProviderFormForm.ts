@@ -48,9 +48,10 @@ export function renderForm(
     return html`
         <ak-text-input
             name="name"
+            placeholder=${msg("Provider name...")}
             value=${ifDefined(provider?.name)}
-            label=${msg("Name")}
-            .errorMessages=${errors?.name ?? []}
+            label=${msg("Provider Name")}
+            .errorMessages=${errors?.name}
             required
             help=${msg("Method's display Name.")}
         ></ak-text-input>
@@ -80,17 +81,16 @@ export function renderForm(
         >
         </ak-switch-input>
 
-        <ak-form-group expanded>
-            <span slot="header"> ${msg("Flow settings")} </span>
-
-            <div slot="body" class="pf-c-form">
+        <ak-form-group open label="${msg("Flow settings")}">
+            <div class="pf-c-form">
                 <ak-form-element-horizontal
                     label=${msg("Bind flow")}
                     required
                     name="authorizationFlow"
-                    .errorMessages=${errors?.authorizationFlow ?? []}
+                    .errorMessages=${errors?.authorizationFlow}
                 >
                     <ak-branded-flow-search
+                        label=${msg("Bind flow")}
                         flowType=${FlowsInstancesListDesignationEnum.Authentication}
                         .currentFlow=${provider?.authorizationFlow}
                         .brandFlow=${brand?.flowAuthentication}
@@ -111,7 +111,7 @@ export function renderForm(
                         .currentFlow=${provider?.invalidationFlow}
                         .brandFlow=${brand?.flowInvalidation}
                         defaultFlowSlug="default-invalidation-flow"
-                        .errorMessages=${errors?.invalidationFlow ?? []}
+                        .errorMessages=${errors?.invalidationFlow}
                         required
                     ></ak-branded-flow-search>
                     <p class="pf-c-form__helper-text">${msg("Flow used for unbinding users.")}</p>
@@ -119,16 +119,15 @@ export function renderForm(
             </div>
         </ak-form-group>
 
-        <ak-form-group expanded>
-            <span slot="header"> ${msg("Protocol settings")} </span>
-            <div slot="body" class="pf-c-form">
+        <ak-form-group open label="${msg("Protocol settings")}">
+            <div class="pf-c-form">
                 <ak-text-input
                     name="baseDn"
                     label=${msg("Base DN")}
                     required
                     value="${provider?.baseDn ?? "DC=ldap,DC=goauthentik,DC=io"}"
                     input-hint="code"
-                    .errorMessages=${errors?.baseDn ?? []}
+                    .errorMessages=${errors?.baseDn}
                     help=${msg(
                         "LDAP DN under which bind requests and search requests can be made.",
                     )}
@@ -138,9 +137,11 @@ export function renderForm(
                 <ak-form-element-horizontal
                     label=${msg("Certificate")}
                     name="certificate"
-                    .errorMessages=${errors?.certificate ?? []}
+                    .errorMessages=${errors?.certificate}
                 >
                     <ak-crypto-certificate-search
+                        label=${msg("Certificate")}
+                        placeholder=${msg("Select a certificate...")}
                         certificate=${ifDefined(provider?.certificate ?? nothing)}
                         name="certificate"
                     >
@@ -152,7 +153,7 @@ export function renderForm(
                     label=${msg("TLS Server name")}
                     name="tlsServerName"
                     value="${provider?.tlsServerName ?? ""}"
-                    .errorMessages=${errors?.tlsServerName ?? []}
+                    .errorMessages=${errors?.tlsServerName}
                     help=${tlsServerNameHelp}
                     input-hint="code"
                 ></ak-text-input>
@@ -162,7 +163,7 @@ export function renderForm(
                     required
                     name="uidStartNumber"
                     value="${provider?.uidStartNumber ?? 2000}"
-                    .errorMessages=${errors?.uidStartNumber ?? []}
+                    .errorMessages=${errors?.uidStartNumber}
                     help=${uidStartNumberHelp}
                 ></ak-number-input>
 
@@ -171,7 +172,7 @@ export function renderForm(
                     required
                     name="gidStartNumber"
                     value="${provider?.gidStartNumber ?? 4000}"
-                    .errorMessages=${errors?.gidStartNumber ?? []}
+                    .errorMessages=${errors?.gidStartNumber}
                     help=${gidStartNumberHelp}
                 ></ak-number-input>
             </div>

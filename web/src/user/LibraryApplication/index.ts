@@ -8,6 +8,8 @@ import { rootInterface } from "#common/theme";
 import { truncateWords } from "#common/utils";
 
 import { AKElement } from "#elements/Base";
+import { SlottedTemplateResult } from "#elements/types";
+import { ifPresent } from "#elements/utils/attributes";
 
 import type { UserInterface } from "#user/index.entrypoint";
 import type { RACLaunchEndpointModal } from "#user/LibraryApplication/RACLaunchEndpointModal";
@@ -18,7 +20,6 @@ import { msg } from "@lit/localize";
 import { css, CSSResult, html, nothing, TemplateResult } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
-import { ifDefined } from "lit/directives/if-defined.js";
 import { styleMap } from "lit/directives/style-map.js";
 
 import PFButton from "@patternfly/patternfly/components/Button/button.css";
@@ -87,35 +88,35 @@ export class LibraryApplication extends AKElement {
                           href="${globalAK().api
                               .base}if/admin/#/core/applications/${application?.slug}"
                       >
-                          <i class="fas fa-edit"></i>&nbsp;${msg("Edit")}
+                          <i class="fas fa-edit" aria-hidden="true"></i>&nbsp;${msg("Edit")}
                       </a>
                   `
-                : html``}
+                : nothing}
         </ak-expand>`;
     }
 
-    renderLaunch(): TemplateResult {
+    renderLaunch(): SlottedTemplateResult {
         if (!this.application) {
-            return html``;
+            return nothing;
         }
         if (this.application?.launchUrl === "goauthentik.io://providers/rac/launch") {
             return html`<div class="pf-c-card__header">
                     <a
                         @click=${() => {
-                            this.racEndpointLaunch?.onClick();
+                            this.racEndpointLaunch?.show();
                         }}
                     >
                         <ak-app-icon
                             size=${PFSize.Large}
                             name=${this.application.name}
-                            icon=${ifDefined(this.application.metaIcon || undefined)}
+                            icon=${ifPresent(this.application.metaIcon)}
                         ></ak-app-icon>
                     </a>
                 </div>
                 <div class="pf-c-card__title">
                     <a
                         @click=${() => {
-                            this.racEndpointLaunch?.onClick();
+                            this.racEndpointLaunch?.show();
                         }}
                     >
                         ${this.application.name}
@@ -126,20 +127,20 @@ export class LibraryApplication extends AKElement {
         }
         return html`<div class="pf-c-card__header">
                 <a
-                    href="${ifDefined(this.application.launchUrl ?? "")}"
-                    target="${ifDefined(this.application.openInNewTab ? "_blank" : undefined)}"
+                    href="${ifPresent(this.application.launchUrl ?? "")}"
+                    target="${ifPresent(this.application.openInNewTab, "_blank")}"
                 >
                     <ak-app-icon
                         size=${PFSize.Large}
                         name=${this.application.name}
-                        icon=${ifDefined(this.application.metaIcon || undefined)}
+                        icon=${ifPresent(this.application.metaIcon)}
                     ></ak-app-icon>
                 </a>
             </div>
             <div class="pf-c-card__title">
                 <a
-                    href="${ifDefined(this.application.launchUrl ?? "")}"
-                    target="${ifDefined(this.application.openInNewTab ? "_blank" : undefined)}"
+                    href="${ifPresent(this.application.launchUrl ?? "")}"
+                    target="${ifPresent(this.application.openInNewTab, "_blank")}"
                     >${this.application.name}</a
                 >
             </div>`;
