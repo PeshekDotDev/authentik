@@ -204,6 +204,7 @@ class SAMLProviderSerializer(ProviderSerializer):
             "sp_binding",
             "sls_binding",
             "backchannel_post_logout",
+            "redirect_on_logout",
             "default_relay_state",
             "default_name_id_policy",
             "url_download_metadata",

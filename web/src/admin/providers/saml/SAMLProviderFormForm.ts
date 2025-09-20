@@ -94,7 +94,16 @@ function renderHasSlsUrl(
                   >
                   </ak-switch-input>
               `
-            : nothing}`;
+            : nothing}
+        <ak-switch-input
+            name="redirectOnLogout"
+            label=${msg("Redirect on logout")}
+            ?checked=${provider?.redirectOnLogout ?? false}
+            help=${msg(
+                "authentik will redirect to the service provider after SP-initiated logout.",
+            )}
+        >
+        </ak-switch-input>`;
 }
 export interface SAMLProviderFormProps {
     provider?: Partial<SAMLProvider>;

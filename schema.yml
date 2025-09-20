@@ -20776,6 +20776,10 @@ paths:
             format: uuid
         explode: true
         style: form
+      - in: query
+        name: redirect_on_logout
+        schema:
+          type: boolean
       - $ref: '#/components/parameters/QuerySearch'
       - in: query
         name: session_valid_not_on_or_after
@@ -52515,6 +52519,10 @@ components:
           description: When enabled, logout requests will be sent directly from the
             server to the Service Provider without user interaction. Only available
             when SLS Binding is set to POST.
+        redirect_on_logout:
+          type: boolean
+          description: authentik will redirect to the service provider after SP-initiated
+            logout.
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins
@@ -55678,6 +55686,10 @@ components:
           description: When enabled, logout requests will be sent directly from the
             server to the Service Provider without user interaction. Only available
             when SLS Binding is set to POST.
+        redirect_on_logout:
+          type: boolean
+          description: authentik will redirect to the service provider after SP-initiated
+            logout.
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins
@@ -55869,6 +55881,10 @@ components:
           description: When enabled, logout requests will be sent directly from the
             server to the Service Provider without user interaction. Only available
             when SLS Binding is set to POST.
+        redirect_on_logout:
+          type: boolean
+          description: authentik will redirect to the service provider after SP-initiated
+            logout.
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins

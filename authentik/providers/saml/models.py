@@ -218,6 +218,11 @@ class SAMLProvider(Provider):
             "SLS Binding is set to POST."
         ),
     )
+    redirect_on_logout = models.BooleanField(
+        default=False,
+        verbose_name=_("Redirect on logout"),
+        help_text=_("authentik will redirect to the service provider after SP-initiated logout."),
+    )
 
     @property
     def launch_url(self) -> str | None:

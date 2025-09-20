@@ -19,6 +19,7 @@ from authentik.policies.views import PolicyAccessView
 from authentik.providers.saml.exceptions import CannotHandleAssertion
 from authentik.providers.saml.models import SAMLProvider
 from authentik.providers.saml.processors.logout_request_parser import LogoutRequestParser
+from authentik.providers.saml.stages.logout_response import SAMLLogoutResponseStage
 from authentik.providers.saml.views.flows import (
     PLAN_CONTEXT_SAML_LOGOUT_REQUEST,
     REQUEST_KEY_RELAY_STATE,
@@ -68,7 +69,15 @@ class SPInitiatedSLOView(PolicyAccessView):
                 **self.plan_context,
             },
         )
-        plan.append_stage(in_memory_stage(SessionEndStage))
+        plan.context["provider"] = self.provider
+        plan.context["logout_request"] = self.plan_context.get(PLAN_CONTEXT_SAML_LOGOUT_REQUEST)
+
+        # Check if we should redirect back to the service provider after logout
+        if self.provider.sls_url and self.provider.redirect_on_logout:
+            plan.append_stage(in_memory_stage(SAMLLogoutResponseStage))
+        else:
+            # Show the standard end session stage
+            plan.append_stage(in_memory_stage(SessionEndStage))
         return plan.to_redirect(self.request, self.flow)
 
     def post(self, request: HttpRequest, application_slug: str) -> HttpResponse:

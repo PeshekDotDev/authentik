@@ -9328,6 +9328,11 @@
                     "title": "Backchannel post logout",
                     "description": "When enabled, logout requests will be sent directly from the server to the Service Provider without user interaction. Only available when SLS Binding is set to POST."
                 },
+                "redirect_on_logout": {
+                    "type": "boolean",
+                    "title": "Redirect on logout",
+                    "description": "authentik will redirect to the service provider after SP-initiated logout."
+                },
                 "default_relay_state": {
                     "type": "string",
                     "title": "Default relay state",
