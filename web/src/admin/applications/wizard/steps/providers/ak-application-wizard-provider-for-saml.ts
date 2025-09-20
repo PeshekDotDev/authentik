@@ -32,7 +32,7 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
         const setHasSlsUrl = (ev: Event) => {
             const akTextInput = ev.currentTarget as HTMLElement & { value?: string };
             if (!akTextInput) return;
-            
+
             const value = akTextInput.value || "";
             this.hasSlsUrl = !!value;
             this.requestUpdate();

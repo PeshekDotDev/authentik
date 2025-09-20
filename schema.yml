@@ -20772,6 +20772,10 @@ paths:
             format: uuid
         explode: true
         style: form
+      - in: query
+        name: redirect_on_logout
+        schema:
+          type: boolean
       - $ref: '#/components/parameters/QuerySearch'
       - in: query
         name: session_valid_not_on_or_after
@@ -52485,6 +52489,10 @@ components:
           - $ref: '#/components/schemas/SlsBindingEnum'
           description: This determines how authentik sends the logout response back
             to the Service Provider.
+        redirect_on_logout:
+          type: boolean
+          description: When enabled, authentik will redirect to the service provider
+            after SP-initiated logout.
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins
@@ -55571,6 +55579,10 @@ components:
           - $ref: '#/components/schemas/SlsBindingEnum'
           description: This determines how authentik sends the logout response back
             to the Service Provider.
+        redirect_on_logout:
+          type: boolean
+          description: When enabled, authentik will redirect to the service provider
+            after SP-initiated logout.
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins
@@ -55755,6 +55767,10 @@ components:
           - $ref: '#/components/schemas/SlsBindingEnum'
           description: This determines how authentik sends the logout response back
             to the Service Provider.
+        redirect_on_logout:
+          type: boolean
+          description: When enabled, authentik will redirect to the service provider
+            after SP-initiated logout.
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins

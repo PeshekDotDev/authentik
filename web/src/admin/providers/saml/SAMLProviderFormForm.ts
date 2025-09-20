@@ -61,15 +61,25 @@ function renderHasSigningKp(provider: Partial<SAMLProvider>) {
 
 function renderHasSlsUrl(provider?: Partial<SAMLProvider>) {
     return html`<ak-radio-input
-        label=${msg("SLS Binding")}
-        name="slsBinding"
-        .options=${serviceProviderBindingOptions}
-        .value=${provider?.slsBinding}
-        help=${msg(
-            "Determines how authentik sends the logout response back to the Service Provider.",
-        )}
-    >
-    </ak-radio-input>`;
+            label=${msg("SLS Binding")}
+            name="slsBinding"
+            .options=${serviceProviderBindingOptions}
+            .value=${provider?.slsBinding}
+            help=${msg(
+                "Determines how authentik sends the logout response back to the Service Provider.",
+            )}
+        >
+        </ak-radio-input>
+
+        <ak-switch-input
+            name="redirectOnLogout"
+            label=${msg("Redirect on logout")}
+            ?checked=${provider?.redirectOnLogout ?? false}
+            help=${msg(
+                "When enabled, authentik will redirect to the service provider after SP-initiated logout.",
+            )}
+        >
+        </ak-switch-input>`;
 }
 
 export function renderForm(
@@ -136,7 +146,9 @@ export function renderForm(
                     label=${msg("SLS URL")}
                     value="${ifDefined(provider?.slsUrl)}"
                     .errorMessages=${errors?.slsUrl ?? []}
-                    help=${msg("Optional Single Logout Service URL to send logout responses to. If not set, no logout response will be sent.")}
+                    help=${msg(
+                        "Optional Single Logout Service URL to send logout responses to. If not set, no logout response will be sent.",
+                    )}
                     @input=${setHasSlsUrl}
                 ></ak-text-input>
                 ${hasSlsUrl ? renderHasSlsUrl(provider) : nothing}

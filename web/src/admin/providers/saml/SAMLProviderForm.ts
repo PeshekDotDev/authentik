@@ -48,13 +48,20 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
         const setHasSlsUrl = (ev: Event) => {
             const akTextInput = ev.currentTarget as HTMLElement & { value?: string };
             if (!akTextInput) return;
-            
+
             const value = akTextInput.value || "";
             this.hasSlsUrl = !!value;
             this.requestUpdate();
         };
 
-        return renderForm(this.instance ?? {}, [], setHasSigningKp, this.hasSigningKp, setHasSlsUrl, this.hasSlsUrl);
+        return renderForm(
+            this.instance ?? {},
+            [],
+            setHasSigningKp,
+            this.hasSigningKp,
+            setHasSlsUrl,
+            this.hasSlsUrl,
+        );
     }
 }
 

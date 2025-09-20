@@ -68,13 +68,14 @@ class SAMLSLOView(PolicyAccessView):
             },
         )
         plan.context["provider"] = self.provider
-        plan.context["logout_request"] = self.request.session[SESSION_KEY_LOGOUT_REQUEST]
+        plan.context["logout_request"] = self.plan_context.get(PLAN_CONTEXT_SAML_LOGOUT_REQUEST)
 
-        # If we have an SLS_url, we are expecting a SAML LogoutRequest
-        # and will send a SAML LogoutResponse to this url
-        if self.provider.sls_url:
+        # If we have an SLS_url and redirect_on_logout is enabled,
+        # we send a SAML LogoutResponse to this url and redirect back to the Service Provider
+        if self.provider.sls_url and self.provider.redirect_on_logout:
             plan.append_stage(in_memory_stage(SAMLLogoutResponseStage))
         else:
+            # Otherwise we show the logout confirmation page
             plan.append_stage(in_memory_stage(SessionEndStage))
         return plan.to_redirect(self.request, self.flow)
 

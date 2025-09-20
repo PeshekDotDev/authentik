@@ -78,6 +78,11 @@ class SAMLProvider(Provider):
             "This determines how authentik sends the logout response back to the Service Provider."
         ),
     )
+    redirect_on_logout = models.BooleanField(
+        default=False,
+        verbose_name=_("Redirect on logout"),
+        help_text=_("authentik will redirect to the service provider after SP-initiated logout."),
+    )
 
     name_id_mapping = models.ForeignKey(
         "SAMLPropertyMapping",
