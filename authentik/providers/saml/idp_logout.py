@@ -73,7 +73,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
         """Decode RelayState to get return URL"""
         try:
             return base64.urlsafe_b64decode(relay_state.encode()).decode()
-        except Exception as exc:
+        except (ValueError, UnicodeDecodeError) as exc:
             LOGGER.warning("Failed to decode relay state", exc=exc)
             return ""
 
@@ -97,8 +97,15 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
         session_data = pending.pop(0)
         self.request.session["saml_logout_pending"] = pending
 
+        provider = SAMLProvider.objects.filter(pk=session_data.get("provider_pk")).first()
+        if not provider:
+            LOGGER.error(
+                "Provider not found for logout",
+                provider_pk=session_data.get("provider_pk"),
+            )
+            return self.get_challenge(*args, **kwargs)
+
         try:
-            provider = SAMLProvider.objects.get(pk=session_data["provider_pk"])
             # Generate return URL back to this stage using the interface URL
             return_url = self.request.build_absolute_uri(
                 reverse("authentik_core:if-flow", kwargs={"flow_slug": self.executor.flow.slug})
@@ -155,8 +162,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
                         "binding": SAMLBindings.REDIRECT,
                     }
                 )
-        except Exception as exc:
-            # Log any error and skip to next provider
+        except (KeyError, AttributeError) as exc:
             LOGGER.error(
                 "Failed to process logout for provider",
                 exc=exc,
@@ -210,9 +216,15 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
         self, session_data: dict, user: User | None, return_url: str
     ) -> dict | None:
         """Process a single session and return logout data"""
-        try:
-            provider = SAMLProvider.objects.get(pk=session_data["provider_pk"])
+        provider = SAMLProvider.objects.filter(pk=session_data.get("provider_pk")).first()
+        if not provider:
+            LOGGER.warning(
+                "Provider not found for logout",
+                provider_pk=session_data.get("provider_pk"),
+            )
+            return None
 
+        try:
             processor = self._create_logout_processor(
                 provider=provider,
                 user=user,
@@ -228,7 +240,7 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
                     "url": provider.sls_url,
                     "saml_request": form_data["SAMLRequest"],
                     "provider_name": provider.name,
-                    "binding": "post",
+                    "binding": SAMLBindings.POST,
                     "relay_state": form_data["RelayState"],
                 }
             else:
@@ -236,9 +248,9 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
                 return {
                     "url": logout_url,
                     "provider_name": provider.name,
-                    "binding": "redirect",
+                    "binding": SAMLBindings.REDIRECT,
                 }
-        except Exception as exc:
+        except (KeyError, AttributeError) as exc:
             LOGGER.warning(
                 "Failed to generate logout URL",
                 provider_pk=session_data.get("provider_pk"),
