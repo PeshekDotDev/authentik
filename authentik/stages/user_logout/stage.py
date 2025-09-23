@@ -27,7 +27,8 @@ class UserLogoutStageView(StageView):
 
         frontchannel_sessions = SAMLSession.objects.filter(
             user=self.request.user,
-            session_not_on_or_after__gt=timezone.now(),
+            expires__gt=timezone.now(),
+            expiring=True,
             provider__sls_url__isnull=False,
             provider__backchannel_post_logout=False,
         ).select_related("provider")

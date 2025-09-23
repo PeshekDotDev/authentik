@@ -10,7 +10,7 @@ from structlog.stdlib import get_logger
 from authentik.core.models import User
 from authentik.flows.challenge import Challenge, ChallengeResponse, HttpChallengeResponse
 from authentik.flows.stage import ChallengeStageView
-from authentik.providers.saml.models import SAMLProvider
+from authentik.providers.saml.models import SAMLBindings, SAMLProvider
 from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
 
 LOGGER = get_logger()
@@ -125,7 +125,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
                 relay_state=relay_state,
             )
 
-            if provider.sls_binding == "post":
+            if provider.sls_binding == SAMLBindings.POST:
                 # For POST binding, return challenge with form data
                 form_data = processor.get_post_form_data()
                 return SAMLLogoutChallenge(
@@ -135,7 +135,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
                         "saml_request": form_data["SAMLRequest"],
                         "relay_state": form_data["RelayState"],
                         "provider_name": provider.name,
-                        "binding": "post",
+                        "binding": SAMLBindings.POST,
                     }
                 )
             else:
@@ -152,7 +152,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
                         "component": "ak-stage-saml-logout",
                         "redirect_url": logout_url,
                         "provider_name": provider.name,
-                        "binding": "redirect",
+                        "binding": SAMLBindings.REDIRECT,
                     }
                 )
         except Exception as exc:
@@ -222,7 +222,7 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
                 relay_state=return_url,
             )
 
-            if provider.sls_binding == "post":
+            if provider.sls_binding == SAMLBindings.POST:
                 form_data = processor.get_post_form_data()
                 return {
                     "url": provider.sls_url,

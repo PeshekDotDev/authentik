@@ -25,6 +25,7 @@ class SAMLSessionSerializer(ModelSerializer):
             "name_id",
             "name_id_format",
             "created",
-            "session_not_on_or_after",
+            "expires",
+            "expiring",
         ]
         read_only_fields = fields

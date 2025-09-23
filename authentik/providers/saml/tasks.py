@@ -103,14 +103,3 @@ def send_post_logout_request(provider: SAMLProvider, processor: LogoutRequestPro
     except Exception as exc:
         LOGGER.error("Failed to send POST logout request", exc=exc, provider=provider)
         return False
-
-
-@actor(description="Clean up expired SAML sessions")
-def clean_expired_saml_sessions():
-    """Clean up expired SAML sessions"""
-
-    expired_sessions = SAMLSession.objects.filter(session_not_on_or_after__lt=now())
-
-    for session in expired_sessions:
-        LOGGER.info("Deleting expired SAML Session", session_index=session.session_index)
-        session.delete()

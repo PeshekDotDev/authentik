@@ -308,9 +308,6 @@ class SAMLSession(SerializerModel, ExpiringModel):
     name_id = models.TextField(help_text=_("SAML NameID value for this session"))
     name_id_format = models.TextField(default="", blank=True, help_text=_("SAML NameID format"))
     created = models.DateTimeField(auto_now_add=True)
-    session_not_on_or_after = models.DateTimeField(
-        help_text=_("Session expiration time sent to the SP")
-    )
 
     @property
     def serializer(self) -> type[Serializer]:

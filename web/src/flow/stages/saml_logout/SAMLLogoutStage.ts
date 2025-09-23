@@ -2,7 +2,7 @@ import "#flow/components/ak-flow-card";
 
 import { BaseStage } from "#flow/stages/base";
 
-import { FlowChallengeResponseRequest, SAMLLogoutChallenge } from "@goauthentik/api";
+import { FlowChallengeResponseRequest, SAMLLogoutChallenge, SpBindingEnum } from "@goauthentik/api";
 
 import { msg, str } from "@lit/localize";
 import { CSSResult, html, nothing, PropertyValues, TemplateResult } from "lit";
@@ -34,12 +34,12 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
         }
 
         // If POST binding, auto-submit the form
-        if (this.challenge.binding === "post" && this.#formRef.value) {
+        if (this.challenge.binding === SpBindingEnum.Post && this.#formRef.value) {
             this.#formRef.value.submit();
         }
 
         // If redirect binding, perform the redirect
-        if (this.challenge.binding === "redirect") {
+        if (this.challenge.binding === SpBindingEnum.Redirect) {
             if (!this.challenge.redirectUrl) {
                 throw new TypeError(`Binding challenge does not a have a redirect URL`);
             }
@@ -63,18 +63,18 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
         }
 
         // For redirect binding, just show loading and firstUpdated will redirect for us
-        if (this.challenge.binding === "redirect") {
+        if (this.challenge.binding === SpBindingEnum.Redirect) {
             return html`<ak-flow-card .challenge=${this.challenge} loading>
                 <span slot="title">${msg(str`Redirecting to SAML provider ${providerName}`)}</span>
             </ak-flow-card>`;
         }
 
-        if (this.challenge.binding !== "post") {
+        if (this.challenge.binding !== SpBindingEnum.Post) {
             throw new TypeError(`Unknown challenge binding type ${this.challenge.binding}`);
         }
 
         // For POST binding, render auto-submit form
-        if (this.challenge.binding === "post") {
+        if (this.challenge.binding === SpBindingEnum.Post) {
             return html`<ak-flow-card .challenge=${this.challenge} loading>
                 <span slot="title"
                     >${msg(str`Posting logout request to SAML provider ${providerName}`)}</span

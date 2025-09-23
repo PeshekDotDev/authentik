@@ -75,8 +75,8 @@ class SAMLFlowFinalView(ChallengeStageView):
                         "session": auth_session,
                         "name_id": processor.name_id,
                         "name_id_format": processor.name_id_format,
-                        "session_not_on_or_after": processor.session_not_on_or_after_datetime,
                         "expires": processor.session_not_on_or_after_datetime,
+                        "expiring": True,
                     },
                 )
         except SAMLException as exc:

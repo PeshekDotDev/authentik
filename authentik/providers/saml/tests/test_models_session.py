@@ -59,7 +59,7 @@ class TestSAMLSessionModel(TestCase):
         self.session_index = generate_id()
         self.name_id = "test@example.com"
         self.name_id_format = SAML_NAME_ID_FORMAT_EMAIL
-        self.session_not_on_or_after = timezone.now() + timedelta(hours=8)
+        self.expires = timezone.now() + timedelta(hours=8)
 
     def test_session_creation(self):
         """Test creating a SAML session"""
@@ -70,7 +70,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Verify the session was created
@@ -97,7 +98,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Try to create another session with same session_index and provider
@@ -109,7 +111,8 @@ class TestSAMLSessionModel(TestCase):
                 session_index=self.session_index,  # Same session_index
                 name_id="different@example.com",
                 name_id_format=self.name_id_format,
-                session_not_on_or_after=self.session_not_on_or_after,
+                expires=self.expires,
+            expiring=True,
             )
 
     def test_cascade_deletion_user(self):
@@ -122,7 +125,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Verify session exists
@@ -144,7 +148,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Verify session exists
@@ -166,7 +171,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Verify session exists
@@ -188,7 +194,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=generate_id(),
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Create second session with different provider
@@ -199,7 +206,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=generate_id(),
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Verify both sessions exist
@@ -219,12 +227,12 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=future_time,
-            expires=future_time,  # Set expires for ExpiringModel
+            expires=future_time,
+            expiring=True,
         )
 
         # Verify expiry time
-        self.assertEqual(saml_session.session_not_on_or_after, future_time)
+        self.assertEqual(saml_session.expires, future_time)
 
         # Check if session is expired (ExpiringModel behavior)
         self.assertFalse(saml_session.is_expired)
@@ -238,8 +246,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=generate_id(),
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=past_time,
-            expires=past_time,  # Set expires for ExpiringModel
+            expires=past_time,
+            expiring=True,
         )
 
         # Check if marked as expired
@@ -255,7 +263,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format="",  # Blank format
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Verify it was created successfully
@@ -272,7 +281,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=generate_id(),
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         session2 = SAMLSession.objects.create(
@@ -282,7 +292,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=generate_id(),
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Query by provider
@@ -303,7 +314,8 @@ class TestSAMLSessionModel(TestCase):
             session_index=self.session_index,
             name_id=self.name_id,
             name_id_format=self.name_id_format,
-            session_not_on_or_after=self.session_not_on_or_after,
+            expires=self.expires,
+            expiring=True,
         )
 
         # Check serializer property
@@ -320,7 +332,8 @@ class TestSAMLSessionModel(TestCase):
                 session_index=generate_id(),
                 name_id=self.name_id,
                 name_id_format=self.name_id_format,
-                session_not_on_or_after=self.session_not_on_or_after,
+                expires=self.expires,
+            expiring=True,
             )
 
         # Verify sessions exist
