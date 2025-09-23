@@ -112,7 +112,7 @@ export class SAMLIFrameLogoutStage extends BaseStage<
 
         this.logoutStatuses = logoutUrls.map(
             (url): LogoutStatus => ({
-                providerName: url.provider_name || "Unknown Provider",
+                providerName: url.provider_name || msg("Unknown Provider"),
                 status: "pending",
             }),
         );

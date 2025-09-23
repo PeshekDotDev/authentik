@@ -48,12 +48,7 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
     }
 
     render(): TemplateResult {
-        let providerName = "SAML Provider";
-        const prefix = "Provider for ";
-        if (this.challenge.providerName && this.challenge.providerName.startsWith(prefix)) {
-            providerName =
-                this.challenge.providerName.slice(prefix.length) || this.challenge.providerName;
-        }
+        const providerName = this.challenge.providerName || msg("SAML Provider");
 
         // For complete state, just show loading (will auto-submit)
         if (this.challenge.isComplete) {
@@ -65,7 +60,7 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
         // For redirect binding, just show loading and firstUpdated will redirect for us
         if (this.challenge.binding === SpBindingEnum.Redirect) {
             return html`<ak-flow-card .challenge=${this.challenge} loading>
-                <span slot="title">${msg(str`Redirecting to SAML provider ${providerName}`)}</span>
+                <span slot="title">${msg(str`Redirecting to SAML provider: ${providerName}`)}</span>
             </ak-flow-card>`;
         }
 
@@ -77,7 +72,7 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
         if (this.challenge.binding === SpBindingEnum.Post) {
             return html`<ak-flow-card .challenge=${this.challenge} loading>
                 <span slot="title"
-                    >${msg(str`Posting logout request to SAML provider ${providerName}`)}</span
+                    >${msg(str`Posting logout request to SAML provider: ${providerName}`)}</span
                 >
                 <form
                     class="pf-c-form"
