@@ -1984,46 +1984,6 @@
                     ],
                     "properties": {
                         "model": {
-                            "const": "authentik_providers_saml.samlsession"
-                        },
-                        "id": {
-                            "type": "string"
-                        },
-                        "state": {
-                            "type": "string",
-                            "enum": [
-                                "absent",
-                                "created",
-                                "must_created",
-                                "present"
-                            ],
-                            "default": "present"
-                        },
-                        "conditions": {
-                            "type": "array",
-                            "items": {
-                                "type": "boolean"
-                            }
-                        },
-                        "permissions": {
-                            "$ref": "#/$defs/model_authentik_providers_saml.samlsession_permissions"
-                        },
-                        "attrs": {
-                            "$ref": "#/$defs/model_authentik_providers_saml.samlsession"
-                        },
-                        "identifiers": {
-                            "$ref": "#/$defs/model_authentik_providers_saml.samlsession"
-                        }
-                    }
-                },
-                {
-                    "type": "object",
-                    "required": [
-                        "model",
-                        "identifiers"
-                    ],
-                    "properties": {
-                        "model": {
                             "const": "authentik_providers_scim.scimmapping"
                         },
                         "id": {
@@ -7462,7 +7422,6 @@
                         "authentik_providers_radius.radiusproviderpropertymapping",
                         "authentik_providers_saml.samlprovider",
                         "authentik_providers_saml.samlpropertymapping",
-                        "authentik_providers_saml.samlsession",
                         "authentik_providers_scim.scimprovider",
                         "authentik_providers_scim.scimmapping",
                         "authentik_rbac.role",
@@ -9363,37 +9322,6 @@
                             "change_samlprovider",
                             "delete_samlprovider",
                             "view_samlprovider"
-                        ]
-                    },
-                    "user": {
-                        "type": "integer"
-                    },
-                    "role": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "model_authentik_providers_saml.samlsession": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        },
-        "model_authentik_providers_saml.samlsession_permissions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "required": [
-                    "permission"
-                ],
-                "properties": {
-                    "permission": {
-                        "type": "string",
-                        "enum": [
-                            "add_samlsession",
-                            "change_samlsession",
-                            "delete_samlsession",
-                            "view_samlsession"
                         ]
                     },
                     "user": {

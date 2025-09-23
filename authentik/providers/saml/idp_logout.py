@@ -2,10 +2,9 @@
 
 import base64
 
-from django.db.models import BooleanField
 from django.http import HttpResponse
 from django.urls import reverse
-from rest_framework.fields import CharField, DictField, ListField
+from rest_framework.fields import BooleanField, CharField, DictField, ListField
 from structlog.stdlib import get_logger
 
 from authentik.core.models import User

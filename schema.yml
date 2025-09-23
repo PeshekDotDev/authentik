@@ -22987,7 +22987,6 @@ paths:
           - authentik_providers_radius.radiusproviderpropertymapping
           - authentik_providers_saml.samlpropertymapping
           - authentik_providers_saml.samlprovider
-          - authentik_providers_saml.samlsession
           - authentik_providers_scim.scimmapping
           - authentik_providers_scim.scimprovider
           - authentik_providers_ssf.ssfprovider
@@ -23217,7 +23216,6 @@ paths:
           - authentik_providers_radius.radiusproviderpropertymapping
           - authentik_providers_saml.samlpropertymapping
           - authentik_providers_saml.samlprovider
-          - authentik_providers_saml.samlsession
           - authentik_providers_scim.scimmapping
           - authentik_providers_scim.scimprovider
           - authentik_providers_ssf.ssfprovider
@@ -46097,7 +46095,6 @@ components:
       - authentik_providers_radius.radiusproviderpropertymapping
       - authentik_providers_saml.samlprovider
       - authentik_providers_saml.samlpropertymapping
-      - authentik_providers_saml.samlsession
       - authentik_providers_scim.scimprovider
       - authentik_providers_scim.scimmapping
       - authentik_rbac.role
@@ -55415,8 +55412,8 @@ components:
         redirect_url:
           type: string
         is_complete:
-          type: string
-          default: 'false'
+          type: boolean
+          default: false
     SAMLLogoutChallengeResponseRequest:
       type: object
       description: Response for SAML logout
