@@ -41,7 +41,7 @@ function renderStatusIcon(status: string): TemplateResult | typeof nothing {
 }
 
 @customElement("ak-stage-saml-iframe-logout")
-export class SAMLIframeLogoutStage extends BaseStage<
+export class SAMLIFrameLogoutStage extends BaseStage<
     SAMLIframeLogoutChallenge,
     FlowChallengeResponseRequest
 > {
@@ -261,6 +261,6 @@ export class SAMLIframeLogoutStage extends BaseStage<
 
 declare global {
     interface HTMLElementTagNameMap {
-        "ak-stage-saml-iframe-logout": SAMLIframeLogoutStage;
+        "ak-stage-saml-iframe-logout": SAMLIFrameLogoutStage;
     }
 }

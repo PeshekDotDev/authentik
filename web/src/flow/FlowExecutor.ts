@@ -530,13 +530,13 @@ export class FlowExecutor
                     .challenge=${this.challenge}
                 ></xak-flow-frame>`;
             case "ak-stage-saml-logout":
-                await import("#flow/stages/saml_logout/SAMLLogoutStage");
+                await import("#flow/providers/saml/SAMLLogoutStage");
                 return html`<ak-stage-saml-logout
                     .host=${this as StageHost}
                     .challenge=${this.challenge}
                 ></ak-stage-saml-logout>`;
             case "ak-stage-saml-iframe-logout":
-                await import("#flow/stages/saml_logout_iframe/SAMLIframeLogoutStage");
+                await import("#flow/providers/saml/SAMLIFrameLogoutStage");
                 return html`<ak-stage-saml-iframe-logout
                     .host=${this as StageHost}
                     .challenge=${this.challenge}
