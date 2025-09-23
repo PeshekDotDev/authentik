@@ -27,7 +27,7 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
         super.firstUpdated(changedProperties);
 
         // If complete, auto-submit to continue flow
-        if (this.challenge.isComplete === "true") {
+        if (this.challenge.isComplete) {
             const submitEvent = new SubmitEvent("submit");
             this.submitForm(submitEvent);
             return;
@@ -56,7 +56,7 @@ export class SAMLLogoutStage extends BaseStage<SAMLLogoutChallenge, FlowChalleng
         }
 
         // For complete state, just show loading (will auto-submit)
-        if (this.challenge.isComplete === "true") {
+        if (this.challenge.isComplete) {
             return html`<ak-flow-card .challenge=${this.challenge} loading>
                 <span slot="title">${msg("SAML logout complete")}</span>
             </ak-flow-card>`;

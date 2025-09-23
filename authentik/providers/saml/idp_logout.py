@@ -2,6 +2,7 @@
 
 import base64
 
+from django.db.models import BooleanField
 from django.http import HttpResponse
 from django.urls import reverse
 from rest_framework.fields import CharField, DictField, ListField
@@ -50,7 +51,7 @@ class SAMLLogoutChallenge(Challenge):
     provider_name = CharField(required=False)
     binding = CharField(required=False)
     redirect_url = CharField(required=False)
-    is_complete = CharField(required=False, default="false")
+    is_complete = BooleanField(required=False, default=False)
 
 
 class SAMLLogoutChallengeResponse(ChallengeResponse):
@@ -90,7 +91,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             return SAMLLogoutChallenge(
                 data={
                     "component": "ak-stage-saml-logout",
-                    "is_complete": "true",
+                    "is_complete": True,
                 }
             )
 
@@ -184,7 +185,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             return self.executor.stage_invalid()
 
         # If is_complete is true, we're done with all providers
-        if challenge.initial_data.get("is_complete") == "true":
+        if challenge.initial_data.get("is_complete") == True:
             LOGGER.debug("All SAML providers logged out, completing stage")
             # Delete the anonymous session
             self.request.session.flush()

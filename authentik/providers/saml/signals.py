@@ -43,6 +43,8 @@ def user_session_deleted_saml_logout(sender, instance: AuthenticatedSession, **_
 @receiver(post_save, sender=User)
 def user_deactivated_saml_logout(sender, instance: User, **kwargs):
     """Send SAML logout requests when user is deactivated"""
+    if instance.is_active:
+        return
 
     saml_sessions = SAMLSession.objects.filter(
         user=instance,

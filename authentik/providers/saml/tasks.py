@@ -53,16 +53,6 @@ def send_saml_logout_request(
 
         success = send_post_logout_request(provider, processor)
 
-        # Log the event (without user reference since they might be deleted)
-        Event.new(
-            EventAction.LOGOUT,
-            provider=provider,
-            message=(
-                f"SAML logout request {'sent' if success else 'failed'} "
-                f"to {provider.name} for session {session_index}"
-            ),
-        ).save()
-
         return success
 
     except Exception as exc:

@@ -171,7 +171,7 @@ class TestSAMLLogoutStageView(TestCase):
 
         # Should return completion challenge
         self.assertIsInstance(challenge, SAMLLogoutChallenge)
-        self.assertEqual(challenge.initial_data["is_complete"], "true")
+        self.assertEqual(challenge.initial_data["is_complete"], True)
 
     def test_get_challenge_provider_not_found(self):
         """Test get_challenge when provider doesn't exist"""
@@ -205,7 +205,7 @@ class TestSAMLLogoutStageView(TestCase):
             mock_logger.error.assert_called()
 
             # Should return completion since no valid providers
-            self.assertEqual(challenge.initial_data["is_complete"], "true")
+            self.assertEqual(challenge.initial_data["is_complete"], True)
 
     def test_challenge_valid_continues_flow(self):
         """Test challenge_valid continues to next provider or completes"""
@@ -232,7 +232,7 @@ class TestSAMLLogoutStageView(TestCase):
 
         # Mock get_challenge to return completion
         stage_view.get_challenge = Mock()
-        completion_challenge = SAMLLogoutChallenge(data={"is_complete": "true"})
+        completion_challenge = SAMLLogoutChallenge(data={"is_complete": True})
         completion_challenge.is_valid()
         stage_view.get_challenge.return_value = completion_challenge
 
