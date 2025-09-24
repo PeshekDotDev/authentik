@@ -184,7 +184,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             return self.executor.stage_invalid()
 
         # If is_complete is true, we're done with all providers
-        if challenge.initial_data.get("is_complete") == True:
+        if challenge.initial_data.get("is_complete"):
             LOGGER.debug("All SAML providers logged out, completing stage")
             # Delete the anonymous session
             self.request.session.flush()

@@ -3,12 +3,10 @@
 import requests
 from django.contrib.auth import get_user_model
 from django.http import HttpResponseBadRequest
-from django.utils.timezone import now
 from dramatiq.actor import actor
 from structlog.stdlib import get_logger
 
-from authentik.events.models import Event, EventAction
-from authentik.providers.saml.models import SAMLProvider, SAMLSession
+from authentik.providers.saml.models import SAMLProvider
 from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
 
 LOGGER = get_logger()

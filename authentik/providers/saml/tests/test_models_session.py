@@ -112,7 +112,7 @@ class TestSAMLSessionModel(TestCase):
                 name_id="different@example.com",
                 name_id_format=self.name_id_format,
                 expires=self.expires,
-            expiring=True,
+                expiring=True,
             )
 
     def test_cascade_deletion_user(self):
@@ -333,7 +333,7 @@ class TestSAMLSessionModel(TestCase):
                 name_id=self.name_id,
                 name_id_format=self.name_id_format,
                 expires=self.expires,
-            expiring=True,
+                expiring=True,
             )
 
         # Verify sessions exist

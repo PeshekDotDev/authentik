@@ -5,6 +5,7 @@ from django.http import HttpRequest, HttpResponse
 from django.utils import timezone
 from structlog.stdlib import get_logger
 
+from authentik.core.models import AuthenticatedSession
 from authentik.flows.models import in_memory_stage
 from authentik.flows.stage import StageView
 from authentik.providers.saml.idp_logout import (
@@ -22,10 +23,17 @@ class UserLogoutStageView(StageView):
 
     def get_saml_sessions_data(self) -> list[dict]:
         """Get all frontchannel SAML session data before logout"""
-        if not self.request.user or not self.request.user.is_authenticated:
+        # Front-channel logout requires having access to the SP's
+        # cookie, so we need to filter by active session
+        try:
+            auth_session = AuthenticatedSession.from_request(self.request, self.request.user)
+        # Sometimes logout stage is fired by other things when there is no user session
+        # so we need to skip injecting the saml session stage
+        except ValueError:
             return []
 
         frontchannel_sessions = SAMLSession.objects.filter(
+            session=auth_session,
             user=self.request.user,
             expires__gt=timezone.now(),
             expiring=True,
