@@ -9,7 +9,7 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.csrf import csrf_exempt
 from structlog.stdlib import get_logger
 
-from authentik.core.models import Application
+from authentik.core.models import Application, AuthenticatedSession
 from authentik.events.models import Event, EventAction
 from authentik.flows.models import Flow, in_memory_stage
 from authentik.flows.planner import PLAN_CONTEXT_APPLICATION, FlowPlanner
@@ -17,7 +17,7 @@ from authentik.flows.stage import SessionEndStage
 from authentik.lib.views import bad_request_message
 from authentik.policies.views import PolicyAccessView
 from authentik.providers.saml.exceptions import CannotHandleAssertion
-from authentik.providers.saml.models import SAMLProvider
+from authentik.providers.saml.models import SAMLProvider, SAMLSession
 from authentik.providers.saml.processors.logout_request_parser import LogoutRequestParser
 from authentik.providers.saml.views.flows import (
     PLAN_CONTEXT_SAML_LOGOUT_REQUEST,
@@ -69,6 +69,14 @@ class SPInitiatedSLOView(PolicyAccessView):
             },
         )
         plan.append_stage(in_memory_stage(SessionEndStage))
+        # remove session here
+        auth_session = AuthenticatedSession.from_request(self.request, self.request.user)
+        if auth_session:
+            SAMLSession.objects.filter(
+                session=auth_session,
+                user=self.request.user,
+                provider=self.provider,
+            ).delete()
         return plan.to_redirect(self.request, self.flow)
 
     def post(self, request: HttpRequest, application_slug: str) -> HttpResponse:
