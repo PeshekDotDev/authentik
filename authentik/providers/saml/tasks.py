@@ -53,7 +53,7 @@ def send_saml_logout_request(
 
         return success
 
-    except Exception as exc:
+    except (AttributeError, KeyError, ValueError) as exc:
         LOGGER.error(
             "Failed to send SAML logout request",
             exc=exc,
@@ -95,6 +95,6 @@ def send_post_logout_request(provider: SAMLProvider, processor: LogoutRequestPro
 
         return response.status_code < HttpResponseBadRequest.status_code
 
-    except Exception as exc:
+    except (requests.RequestException, ValueError) as exc:
         LOGGER.error("Failed to send POST logout request", exc=exc, provider=provider)
         return False

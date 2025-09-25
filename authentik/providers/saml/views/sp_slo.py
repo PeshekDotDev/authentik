@@ -103,7 +103,7 @@ class SPInitiatedSLOBindingRedirectView(SPInitiatedSLOView):
                     decoded_url = base64.urlsafe_b64decode(relay_state.encode()).decode()
                     LOGGER.debug("Decoded relay state, redirecting", return_url=decoded_url)
                     return redirect(decoded_url)
-                except Exception as exc:
+                except (ValueError, UnicodeDecodeError) as exc:
                     # If decoding fails, treat it as a plain URL
                     LOGGER.debug("Failed to decode relay state, using as-is", exc=exc)
                     return redirect(relay_state)
@@ -170,7 +170,7 @@ class SPInitiatedSLOBindingPOSTView(SPInitiatedSLOView):
                     decoded_url = base64.urlsafe_b64decode(relay_state.encode()).decode()
                     LOGGER.debug("Decoded relay state, redirecting", return_url=decoded_url)
                     return redirect(decoded_url)
-                except Exception as exc:
+                except (ValueError, UnicodeDecodeError) as exc:
                     # If decoding fails, treat it as a plain URL
                     LOGGER.debug("Failed to decode relay state, using as-is", exc=exc)
                     return redirect(relay_state)
