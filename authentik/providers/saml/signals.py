@@ -40,7 +40,8 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
         expires__gt=timezone.now(),
         expiring=True,
         provider__sls_url__isnull=False,
-        provider__backchannel_post_logout=False,
+    ).exclude(
+        provider__logout_method="backchannel"
     ).select_related("provider")
 
     if not frontchannel_sessions.exists():
@@ -62,8 +63,17 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
     executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_SESSIONS] = session_data
 
     # Inject appropriate SAML logout stage based on configuration
-    stage = executor.current_stage
-    if hasattr(stage, "saml_redirect_logout") and stage.saml_redirect_logout:
+    # Check if any session uses redirect method
+    uses_redirect = any(
+        SAMLSession.objects.filter(
+            session=auth_session,
+            provider__pk=session["provider_pk"],
+            provider__logout_method="frontchannel_redirect"
+        ).exists()
+        for session in session_data
+    )
+
+    if uses_redirect:
         from authentik.providers.saml.idp_logout import SAMLLogoutStageView
 
         saml_stage = in_memory_stage(SAMLLogoutStageView)
@@ -90,7 +100,7 @@ def user_session_deleted_saml_logout(sender, instance: AuthenticatedSession, **_
     saml_sessions = SAMLSession.objects.filter(
         session=instance,
         provider__sls_url__isnull=False,
-        provider__backchannel_post_logout=True,
+        provider__logout_method="backchannel",
         provider__sls_binding="post",
     ).select_related("provider", "user")
 
@@ -120,7 +130,7 @@ def user_deactivated_saml_logout(sender, instance: User, **kwargs):
     saml_sessions = SAMLSession.objects.filter(
         user=instance,
         provider__sls_url__isnull=False,
-        provider__backchannel_post_logout=True,
+        provider__logout_method="backchannel",
         provider__sls_binding="post",
     ).select_related("provider")
 

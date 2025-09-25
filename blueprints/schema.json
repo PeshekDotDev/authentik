@@ -9282,10 +9282,15 @@
                     "title": "SLS Binding",
                     "description": "This determines how authentik sends the logout response back to the Service Provider."
                 },
-                "backchannel_post_logout": {
-                    "type": "boolean",
-                    "title": "Backchannel post logout",
-                    "description": "When enabled, logout requests will be sent directly from the server to the Service Provider without user interaction. Only available when SLS Binding is set to POST."
+                "logout_method": {
+                    "type": "string",
+                    "enum": [
+                        "frontchannel_iframe",
+                        "frontchannel_redirect",
+                        "backchannel"
+                    ],
+                    "title": "Logout method",
+                    "description": "Method to use for logout. Front-channel iframe loads all logout URLs simultaneously in hidden iframes. Front-channel redirect redirects through each logout URL sequentially. Back-channel sends logout requests directly from the server without user interaction (requires POST SLS binding)."
                 },
                 "default_relay_state": {
                     "type": "string",

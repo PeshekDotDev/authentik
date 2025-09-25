@@ -20710,10 +20710,6 @@ paths:
           type: string
           format: uuid
       - in: query
-        name: backchannel_post_logout
-        schema:
-          type: boolean
-      - in: query
         name: default_name_id_policy
         schema:
           type: string
@@ -20755,6 +20751,17 @@ paths:
         name: issuer
         schema:
           type: string
+      - in: query
+        name: logout_method
+        schema:
+          type: string
+          enum:
+          - backchannel
+          - frontchannel_iframe
+          - frontchannel_redirect
+        description: |+
+          Method to use for logout. Front-channel iframe loads all logout URLs simultaneously in hidden iframes. Front-channel redirect redirects through each logout URL sequentially. Back-channel sends logout requests directly from the server without user interaction (requires POST SLS binding).
+
       - in: query
         name: name
         schema:
@@ -45759,6 +45766,12 @@ components:
       required:
       - challenge
       - name
+    LogoutMethodEnum:
+      enum:
+      - frontchannel_iframe
+      - frontchannel_redirect
+      - backchannel
+      type: string
     MatchingModeEnum:
       enum:
       - strict
@@ -52507,11 +52520,13 @@ components:
           - $ref: '#/components/schemas/SlsBindingEnum'
           description: This determines how authentik sends the logout response back
             to the Service Provider.
-        backchannel_post_logout:
-          type: boolean
-          description: When enabled, logout requests will be sent directly from the
-            server to the Service Provider without user interaction. Only available
-            when SLS Binding is set to POST.
+        logout_method:
+          allOf:
+          - $ref: '#/components/schemas/LogoutMethodEnum'
+          description: Method to use for logout. Front-channel iframe loads all logout
+            URLs simultaneously in hidden iframes. Front-channel redirect redirects
+            through each logout URL sequentially. Back-channel sends logout requests
+            directly from the server without user interaction (requires POST SLS binding).
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins
@@ -55670,11 +55685,13 @@ components:
           - $ref: '#/components/schemas/SlsBindingEnum'
           description: This determines how authentik sends the logout response back
             to the Service Provider.
-        backchannel_post_logout:
-          type: boolean
-          description: When enabled, logout requests will be sent directly from the
-            server to the Service Provider without user interaction. Only available
-            when SLS Binding is set to POST.
+        logout_method:
+          allOf:
+          - $ref: '#/components/schemas/LogoutMethodEnum'
+          description: Method to use for logout. Front-channel iframe loads all logout
+            URLs simultaneously in hidden iframes. Front-channel redirect redirects
+            through each logout URL sequentially. Back-channel sends logout requests
+            directly from the server without user interaction (requires POST SLS binding).
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins
@@ -55861,11 +55878,13 @@ components:
           - $ref: '#/components/schemas/SlsBindingEnum'
           description: This determines how authentik sends the logout response back
             to the Service Provider.
-        backchannel_post_logout:
-          type: boolean
-          description: When enabled, logout requests will be sent directly from the
-            server to the Service Provider without user interaction. Only available
-            when SLS Binding is set to POST.
+        logout_method:
+          allOf:
+          - $ref: '#/components/schemas/LogoutMethodEnum'
+          description: Method to use for logout. Front-channel iframe loads all logout
+            URLs simultaneously in hidden iframes. Front-channel redirect redirects
+            through each logout URL sequentially. Back-channel sends logout requests
+            directly from the server without user interaction (requires POST SLS binding).
         default_relay_state:
           type: string
           description: Default relay_state value for IDP-initiated logins

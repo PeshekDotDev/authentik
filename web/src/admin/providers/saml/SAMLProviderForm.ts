@@ -21,7 +21,7 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
     protected hasPostBinding = false;
 
     @state()
-    protected backchannelPostLogout = false;
+    protected logoutMethod = "frontchannel_iframe";
 
     async loadInstance(pk: number): Promise<SAMLProvider> {
         const provider = await new ProvidersApi(DEFAULT_CONFIG).providersSamlRetrieve({
@@ -30,14 +30,14 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
         this.hasSigningKp = !!provider.signingKp;
         this.hasSlsUrl = !!provider.slsUrl;
         this.hasPostBinding = provider.slsBinding === SpBindingEnum.Post;
-        this.backchannelPostLogout = provider.backchannelPostLogout ?? false;
+        this.logoutMethod = provider.logoutMethod ?? "frontchannel_iframe";
         return provider;
     }
 
     async send(data: SAMLProvider): Promise<SAMLProvider> {
-        // If SLS binding is not POST, ensure backchannel post logout is disabled
-        if (data.slsBinding !== SpBindingEnum.Post) {
-            data.backchannelPostLogout = false;
+        // If SLS binding is not POST, ensure logout method is not backchannel
+        if (data.slsBinding !== SpBindingEnum.Post && data.logoutMethod === "backchannel") {
+            data.logoutMethod = "frontchannel_iframe";
         }
 
         if (this.instance) {
@@ -71,9 +71,9 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
             const target = ev.target as HTMLInputElement;
             this.hasPostBinding = target.value === SpBindingEnum.Post;
 
-            // If switching to redirect binding, disable backchannel post logout
-            if (target.value === SpBindingEnum.Redirect) {
-                this.backchannelPostLogout = false;
+            // If switching to redirect binding, change logout method from backchannel if needed
+            if (target.value === SpBindingEnum.Redirect && this.logoutMethod === "backchannel") {
+                this.logoutMethod = "frontchannel_iframe";
             }
 
             this.requestUpdate();

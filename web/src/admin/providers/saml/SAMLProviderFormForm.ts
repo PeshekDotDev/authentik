@@ -71,6 +71,23 @@ function renderHasSlsUrl(
     hasPostBinding: boolean = false,
     setSlsBinding: (ev: Event) => void,
 ) {
+    const logoutMethodOptions: RadioOption<string>[] = [
+        {
+            label: msg("Front-channel (Iframe)"),
+            value: "frontchannel_iframe",
+            default: true,
+        },
+        {
+            label: msg("Front-channel (Redirect)"),
+            value: "frontchannel_redirect",
+        },
+        {
+            label: msg("Back-channel (POST)"),
+            value: "backchannel",
+            disabled: !hasPostBinding,
+        },
+    ];
+
     return html`<ak-radio-input
             label=${msg("SLS Binding")}
             name="slsBinding"
@@ -82,19 +99,14 @@ function renderHasSlsUrl(
             @change=${setSlsBinding}
         >
         </ak-radio-input>
-        ${hasPostBinding
-            ? html`
-                  <ak-switch-input
-                      name="backchannelPostLogout"
-                      label=${msg("Backchannel Post Logout")}
-                      ?checked=${provider?.backchannelPostLogout ?? false}
-                      help=${msg(
-                          "When enabled, logout requests will be sent directly from the server to the Service Provider without user interaction. Only available with POST binding.",
-                      )}
-                  >
-                  </ak-switch-input>
-              `
-            : nothing}`;
+        <ak-radio-input
+            label=${msg("Logout Method")}
+            name="logoutMethod"
+            .options=${logoutMethodOptions}
+            .value=${provider?.logoutMethod || "frontchannel_iframe"}
+            help=${msg("Method to use for logout when SLS URL is configured.")}
+        >
+        </ak-radio-input>`;
 }
 export interface SAMLProviderFormProps {
     provider?: Partial<SAMLProvider>;

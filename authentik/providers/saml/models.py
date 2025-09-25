@@ -210,12 +210,18 @@ class SAMLProvider(Provider):
     sign_response = models.BooleanField(default=False)
     sign_logout_request = models.BooleanField(default=False)
 
-    backchannel_post_logout = models.BooleanField(
-        default=False,
+    logout_method = models.TextField(
+        choices=[
+            ("frontchannel_iframe", _("Front-channel (Iframe)")),
+            ("frontchannel_redirect", _("Front-channel (Redirect)")),
+            ("backchannel", _("Back-channel (POST)")),
+        ],
+        default="frontchannel_iframe",
         help_text=_(
-            "When enabled, logout requests will be sent directly from the server "
-            "to the Service Provider without user interaction. Only available when "
-            "SLS Binding is set to POST."
+            "Method to use for logout. Front-channel iframe loads all logout URLs simultaneously "
+            "in hidden iframes. Front-channel redirect redirects through each logout URL sequentially. "
+            "Back-channel sends logout requests directly from the server without user interaction "
+            "(requires POST SLS binding)."
         ),
     )
 
