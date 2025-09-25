@@ -45,6 +45,14 @@ class SAMLBindings(models.TextChoices):
     POST = "post"
 
 
+class LogoutMethods(models.TextChoices):
+    """SAML Logout methods supported by authentik"""
+
+    FRONTCHANNEL_IFRAME = "frontchannel_iframe"
+    FRONTCHANNEL_REDIRECT = "frontchannel_redirect"
+    BACKCHANNEL = "backchannel"
+
+
 class SAMLProvider(Provider):
     """SAML 2.0 Endpoint for applications which support SAML."""
 
@@ -211,12 +219,8 @@ class SAMLProvider(Provider):
     sign_logout_request = models.BooleanField(default=False)
 
     logout_method = models.TextField(
-        choices=[
-            ("frontchannel_iframe", _("Front-channel (Iframe)")),
-            ("frontchannel_redirect", _("Front-channel (Redirect)")),
-            ("backchannel", _("Back-channel (POST)")),
-        ],
-        default="frontchannel_iframe",
+        choices=LogoutMethods.choices,
+        default=LogoutMethods.FRONTCHANNEL_IFRAME,
         help_text=_(
             "Method to use for logout. Front-channel iframe loads all logout URLs simultaneously "
             "in hidden iframes. Front-channel redirect redirects through each logout URL "

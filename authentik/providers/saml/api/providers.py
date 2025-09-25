@@ -28,7 +28,7 @@ from authentik.core.api.used_by import UsedByMixin
 from authentik.core.api.utils import PassiveSerializer, PropertyMappingPreviewSerializer
 from authentik.core.models import Provider
 from authentik.flows.models import Flow, FlowDesignation
-from authentik.providers.saml.models import SAMLProvider
+from authentik.providers.saml.models import LogoutMethods, SAMLProvider
 from authentik.providers.saml.processors.assertion import AssertionProcessor
 from authentik.providers.saml.processors.authn_request_parser import AuthNRequest
 from authentik.providers.saml.processors.metadata import MetadataProcessor
@@ -168,15 +168,13 @@ class SAMLProviderSerializer(ProviderSerializer):
                     )
                 )
 
-        # Validate backchannel_post_logout
-        if attrs.get("backchannel_post_logout", False) and attrs.get("sls_binding") != "post":
-            raise ValidationError(
-                {
-                    "backchannel_post_logout": _(
-                        "Backchannel logout is only available with POST binding"
-                    )
-                }
-            )
+        # Validate logout_method - backchannel is only available with POST SLS binding
+        if (
+            attrs.get("logout_method") == LogoutMethods.BACKCHANNEL
+            and attrs.get("sls_binding") == SAML_BINDING_REDIRECT
+        ):
+            # Auto-correct to frontchannel_iframe
+            attrs["logout_method"] = LogoutMethods.FRONTCHANNEL_IFRAME
 
         return super().validate(attrs)
 

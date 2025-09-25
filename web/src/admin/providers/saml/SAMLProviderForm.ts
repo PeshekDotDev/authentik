@@ -5,7 +5,7 @@ import { DEFAULT_CONFIG } from "#common/api/config";
 import { type AkCryptoCertificateSearch } from "#admin/common/ak-crypto-certificate-search";
 import { BaseProviderForm } from "#admin/providers/BaseProviderForm";
 
-import { ProvidersApi, SAMLProvider, SpBindingEnum } from "@goauthentik/api";
+import { LogoutMethodEnum, ProvidersApi, SAMLProvider, SpBindingEnum } from "@goauthentik/api";
 
 import { customElement, state } from "lit/decorators.js";
 
@@ -21,7 +21,7 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
     protected hasPostBinding = false;
 
     @state()
-    protected logoutMethod = "frontchannel_iframe";
+    protected logoutMethod: string = LogoutMethodEnum.FrontchannelIframe;
 
     async loadInstance(pk: number): Promise<SAMLProvider> {
         const provider = await new ProvidersApi(DEFAULT_CONFIG).providersSamlRetrieve({
@@ -30,14 +30,17 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
         this.hasSigningKp = !!provider.signingKp;
         this.hasSlsUrl = !!provider.slsUrl;
         this.hasPostBinding = provider.slsBinding === SpBindingEnum.Post;
-        this.logoutMethod = provider.logoutMethod ?? "frontchannel_iframe";
+        this.logoutMethod = provider.logoutMethod ?? LogoutMethodEnum.FrontchannelIframe;
         return provider;
     }
 
     async send(data: SAMLProvider): Promise<SAMLProvider> {
-        // If SLS binding is not POST, ensure logout method is not backchannel
-        if (data.slsBinding !== SpBindingEnum.Post && data.logoutMethod === "backchannel") {
-            data.logoutMethod = "frontchannel_iframe";
+        // If SLS binding is redirect, ensure logout method is not backchannel
+        if (
+            data.slsBinding === SpBindingEnum.Redirect &&
+            data.logoutMethod === LogoutMethodEnum.Backchannel
+        ) {
+            data.logoutMethod = LogoutMethodEnum.FrontchannelIframe;
         }
 
         if (this.instance) {
@@ -72,8 +75,11 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
             this.hasPostBinding = target.value === SpBindingEnum.Post;
 
             // If switching to redirect binding, change logout method from backchannel if needed
-            if (target.value === SpBindingEnum.Redirect && this.logoutMethod === "backchannel") {
-                this.logoutMethod = "frontchannel_iframe";
+            if (
+                target.value === SpBindingEnum.Redirect &&
+                this.logoutMethod === LogoutMethodEnum.Backchannel
+            ) {
+                this.logoutMethod = LogoutMethodEnum.FrontchannelIframe;
             }
 
             this.requestUpdate();

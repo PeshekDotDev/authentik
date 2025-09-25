@@ -8,7 +8,7 @@ from structlog.stdlib import get_logger
 from authentik.core.models import AuthenticatedSession, User
 from authentik.flows.models import in_memory_stage
 from authentik.flows.signals import flow_pre_user_logout
-from authentik.providers.saml.models import SAMLSession
+from authentik.providers.saml.models import LogoutMethods, SAMLSession
 from authentik.providers.saml.tasks import send_saml_logout_request
 from authentik.providers.saml.views.flows import (
     PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS,
@@ -45,7 +45,7 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
             expiring=True,
             provider__sls_url__isnull=False,
         )
-        .exclude(provider__logout_method="backchannel")
+        .exclude(provider__logout_method=LogoutMethods.BACKCHANNEL)
         .select_related("provider")
     )
 
@@ -65,7 +65,7 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
             "name_id_format": session.name_id_format,
         }
 
-        if session.provider.logout_method == "frontchannel_redirect":
+        if session.provider.logout_method == LogoutMethods.FRONTCHANNEL_REDIRECT:
             redirect_sessions.append(session_data)
         else:  # frontchannel_iframe is the default
             iframe_sessions.append(session_data)

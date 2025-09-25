@@ -16,6 +16,7 @@ import { RadioOption } from "#elements/forms/Radio";
 
 import {
     FlowsInstancesListDesignationEnum,
+    LogoutMethodEnum,
     PropertymappingsApi,
     PropertymappingsProviderSamlListRequest,
     SAMLNameIDPolicyEnum,
@@ -75,16 +76,16 @@ function renderHasSlsUrl(
     const logoutMethodOptions: RadioOption<string>[] = [
         {
             label: msg("Front-channel (Iframe)"),
-            value: "frontchannel_iframe",
+            value: LogoutMethodEnum.FrontchannelIframe,
             default: true,
         },
         {
             label: msg("Front-channel (Redirect)"),
-            value: "frontchannel_redirect",
+            value: LogoutMethodEnum.FrontchannelRedirect,
         },
         {
             label: msg("Back-channel (POST)"),
-            value: "backchannel",
+            value: LogoutMethodEnum.Backchannel,
             disabled: !hasPostBinding,
         },
     ];
@@ -104,7 +105,7 @@ function renderHasSlsUrl(
             label=${msg("Logout Method")}
             name="logoutMethod"
             .options=${logoutMethodOptions}
-            .value=${provider?.logoutMethod || logoutMethod || "frontchannel_iframe"}
+            .value=${provider?.logoutMethod || logoutMethod || LogoutMethodEnum.FrontchannelIframe}
             help=${msg("Method to use for logout when SLS URL is configured.")}
         >
         </ak-radio-input>`;
