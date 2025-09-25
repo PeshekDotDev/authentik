@@ -37,6 +37,8 @@ REQUEST_KEY_RELAY_STATE = "RelayState"
 
 PLAN_CONTEXT_SAML_AUTH_N_REQUEST = "authentik/providers/saml/authn_request"
 PLAN_CONTEXT_SAML_LOGOUT_REQUEST = "authentik/providers/saml/logout_request"
+PLAN_CONTEXT_SAML_LOGOUT_SESSIONS = "authentik/providers/saml/logout_sessions"
+SESSION_KEY_SAML_LOGOUT_RETURN = "saml_logout_return_url"
 
 
 # This View doesn't have a URL on purpose, as its called by the FlowExecutor

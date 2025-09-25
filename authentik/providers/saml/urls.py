@@ -4,6 +4,14 @@ from django.urls import path
 
 from authentik.providers.saml.api.property_mappings import SAMLPropertyMappingViewSet
 from authentik.providers.saml.api.providers import SAMLProviderViewSet
+
+# Import logout stages to ensure challenges are discovered by schema generation
+from authentik.providers.saml.idp_logout import (  # noqa: F401
+    SAMLIframeLogoutChallenge,
+    SAMLIframeLogoutStageView,
+    SAMLLogoutChallenge,
+    SAMLLogoutStageView,
+)
 from authentik.providers.saml.views import metadata, sso
 from authentik.providers.saml.views.sp_slo import (
     SPInitiatedSLOBindingPOSTView,

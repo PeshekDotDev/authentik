@@ -24,6 +24,7 @@ from authentik.providers.saml.views.flows import (
     REQUEST_KEY_RELAY_STATE,
     REQUEST_KEY_SAML_REQUEST,
     REQUEST_KEY_SAML_RESPONSE,
+    SESSION_KEY_SAML_LOGOUT_RETURN,
 )
 
 LOGGER = get_logger()
@@ -108,7 +109,7 @@ class SPInitiatedSLOBindingRedirectView(SPInitiatedSLOView):
                     return redirect(relay_state)
 
             # No RelayState provided, try to get return URL from session
-            return_url = request.session.get("saml_logout_return_url")
+            return_url = request.session.get(SESSION_KEY_SAML_LOGOUT_RETURN)
             if return_url:
                 LOGGER.debug("No relay state, using session fallback", return_url=return_url)
                 return redirect(return_url)
@@ -175,7 +176,7 @@ class SPInitiatedSLOBindingPOSTView(SPInitiatedSLOView):
                     return redirect(relay_state)
 
             # No RelayState provided, try to get return URL from session
-            return_url = request.session.get("saml_logout_return_url")
+            return_url = request.session.get(SESSION_KEY_SAML_LOGOUT_RETURN)
             if return_url:
                 LOGGER.debug("No relay state, using session fallback", return_url=return_url)
                 return redirect(return_url)

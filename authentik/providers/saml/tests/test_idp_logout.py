@@ -16,6 +16,7 @@ from authentik.providers.saml.idp_logout import (
     SAMLLogoutStageView,
 )
 from authentik.providers.saml.models import SAMLProvider
+from authentik.providers.saml.views.flows import SESSION_KEY_SAML_LOGOUT_RETURN
 from authentik.sources.saml.processors.constants import (
     RSA_SHA256,
     SAML_NAME_ID_FORMAT_EMAIL,
@@ -114,7 +115,8 @@ class TestSAMLLogoutStageView(TestCase):
 
         # Should have stored return URL in session
         self.assertEqual(
-            request.session["saml_logout_return_url"], "https://idp.example.com/flow/test-flow"
+            request.session[SESSION_KEY_SAML_LOGOUT_RETURN],
+            "https://idp.example.com/flow/test-flow",
         )
 
     def test_get_challenge_with_pending_providers_post(self):

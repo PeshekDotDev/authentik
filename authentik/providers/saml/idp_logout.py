@@ -12,6 +12,10 @@ from authentik.flows.challenge import Challenge, ChallengeResponse, HttpChalleng
 from authentik.flows.stage import ChallengeStageView
 from authentik.providers.saml.models import SAMLBindings, SAMLProvider
 from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
+from authentik.providers.saml.views.flows import (
+    PLAN_CONTEXT_SAML_LOGOUT_SESSIONS,
+    SESSION_KEY_SAML_LOGOUT_RETURN,
+)
 
 LOGGER = get_logger()
 
@@ -78,15 +82,14 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             return ""
 
     def get_pending_providers(self) -> list[dict]:
-        """Get list of SAML providers that need logout"""
-        # Get logouts off of anonymous session
-        return self.request.session.get("saml_logout_pending", [])
+        """Get list of SAML providers that need to front-channel logout"""
+        return self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, [])
 
     def get_challenge(self, *args, **kwargs) -> Challenge:
         """Generate challenge for next provider"""
         pending = self.get_pending_providers()
         if not pending:
-            # All done, return completion challenge
+            self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, None)
             return SAMLLogoutChallenge(
                 data={
                     "component": "ak-stage-saml-logout",
@@ -95,7 +98,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             )
 
         session_data = pending.pop(0)
-        self.request.session["saml_logout_pending"] = pending
+        self.executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_SESSIONS] = pending
 
         provider = SAMLProvider.objects.filter(pk=session_data.get("provider_pk")).first()
         if not provider:
@@ -112,7 +115,8 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             )
 
             # Store return URL in session as fallback if SP doesn't echo RelayState
-            self.request.session["saml_logout_return_url"] = return_url
+            # This is needed for SP-initiated logout views that are outside the flow context
+            self.request.session[SESSION_KEY_SAML_LOGOUT_RETURN] = return_url
 
             # Use stored session data (user is already logged out)
             name_id = session_data["name_id"]
@@ -183,11 +187,10 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             LOGGER.error("Invalid challenge", errors=challenge.errors)
             return self.executor.stage_invalid()
 
-        # If is_complete is true, we're done with all providers
         if challenge.initial_data.get("is_complete"):
             LOGGER.debug("All SAML providers logged out, completing stage")
-            # Delete the anonymous session
-            self.request.session.flush()
+            # Clean up the RelayState fallback
+            self.request.session.pop(SESSION_KEY_SAML_LOGOUT_RETURN, None)
             return self.executor.stage_ok()
 
         # Otherwise, return the next challenge
@@ -260,19 +263,23 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
 
     def get_challenge(self) -> Challenge:
         """Generate iframe logout challenge"""
+        pending = self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, [])
+
         return_url = self.request.build_absolute_uri(
             reverse("authentik_core:if-flow", kwargs={"flow_slug": self.executor.flow.slug})
         )
 
         logout_urls = []
-
-        pending = self.request.session.get("saml_logout_pending", [])
         for session_data in pending:
             logout_data = self._process_session_for_logout(
                 session_data, user=None, return_url=return_url
             )
             if logout_data:
                 logout_urls.append(logout_data)
+
+        # Clear context after processing
+        self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, None)
+
         return SAMLIframeLogoutChallenge(
             data={
                 "component": "ak-stage-saml-iframe-logout",
@@ -282,6 +289,6 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
 
     def challenge_valid(self, response: ChallengeResponse) -> HttpResponse:
         """Iframe logout completed"""
-        # Delete the anonymous session
-        self.request.session.flush()
+        # Clean up the RelayState fallback
+        self.request.session.pop(SESSION_KEY_SAML_LOGOUT_RETURN, None)
         return self.executor.stage_ok()

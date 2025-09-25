@@ -2,89 +2,30 @@
 
 from django.contrib.auth import logout
 from django.http import HttpRequest, HttpResponse
-from django.utils import timezone
 from structlog.stdlib import get_logger
 
-from authentik.core.models import AuthenticatedSession
-from authentik.flows.models import in_memory_stage
+from authentik.flows.signals import flow_pre_user_logout
 from authentik.flows.stage import StageView
-from authentik.providers.saml.idp_logout import (
-    SAMLIframeLogoutStageView,
-    SAMLLogoutStageView,
-)
-from authentik.providers.saml.models import SAMLSession
-from authentik.stages.user_logout.models import UserLogoutStage
 
 LOGGER = get_logger()
 
 
 class UserLogoutStageView(StageView):
-    """Logout stage that logs out the user and optionally handles SAML logout"""
-
-    def get_saml_sessions_data(self) -> list[dict]:
-        """Get all frontchannel SAML session data before logout"""
-        # Front-channel logout requires having access to the SP's
-        # cookie, so we need to filter by active session
-        try:
-            auth_session = AuthenticatedSession.from_request(self.request, self.request.user)
-        # Sometimes logout stage is fired by other things when there is no user session
-        # so we need to skip injecting the saml session stage
-        except ValueError:
-            return []
-
-        frontchannel_sessions = SAMLSession.objects.filter(
-            session=auth_session,
-            user=self.request.user,
-            expires__gt=timezone.now(),
-            expiring=True,
-            provider__sls_url__isnull=False,
-            provider__backchannel_post_logout=False,
-        ).select_related("provider")
-
-        return [
-            {
-                "provider_pk": str(session.provider.pk),
-                "session_index": session.session_index,
-                "name_id": session.name_id,
-                "name_id_format": session.name_id_format,
-            }
-            for session in frontchannel_sessions
-        ]
-
-    def inject_saml_logout_stage(self) -> None:
-        """Dynamically inject SAML logout stage into the flow"""
-        stage: UserLogoutStage = self.executor.current_stage
-
-        if stage.saml_redirect_logout:
-            saml_stage = in_memory_stage(SAMLLogoutStageView)
-        else:
-            saml_stage = in_memory_stage(SAMLIframeLogoutStageView)
-
-        self.executor.plan.insert_stage(saml_stage)
+    """Logout stage that logs out the user"""
 
     def dispatch(self, request: HttpRequest) -> HttpResponse:
-        """Log out user first, then handle SAML logout if needed"""
+        """Log out user and send pre-logout signal"""
 
-        # Get SAML session data before logging out
-        frontchannel_sessions = self.get_saml_sessions_data()
+        # This signal is for handling SAML front-channel logouts
+        flow_pre_user_logout.send(
+            sender=self.__class__, request=request, user=request.user, executor=self.executor
+        )
 
-        # Log the user out first
         LOGGER.debug(
             "Logged out",
             user=request.user,
             flow_slug=self.executor.flow.slug,
         )
         logout(self.request)
-
-        if frontchannel_sessions:
-            # Store the data in an anonymous session for SAML logout stage to use
-            self.request.session["saml_logout_pending"] = frontchannel_sessions
-            self.request.session.save()  # Ensure session is saved after logout
-            self.inject_saml_logout_stage()
-            LOGGER.debug(
-                "Injecting SAML frontchannel logout",
-                user=request.user,
-                frontchannel_sessions=str(frontchannel_sessions),
-            )
 
         return self.executor.stage_ok()

@@ -12,6 +12,7 @@ from authentik.core.tests.utils import create_test_brand, create_test_flow
 from authentik.providers.saml.exceptions import CannotHandleAssertion
 from authentik.providers.saml.models import SAMLProvider
 from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
+from authentik.providers.saml.views.flows import SESSION_KEY_SAML_LOGOUT_RETURN
 from authentik.providers.saml.views.sp_slo import (
     SPInitiatedSLOBindingPOSTView,
     SPInitiatedSLOBindingRedirectView,
@@ -146,7 +147,7 @@ class TestSPInitiatedSLOViews(TestCase):
                 "SAMLResponse": "dummy-response",
             },
         )
-        request.session = {"saml_logout_return_url": session_return_url}
+        request.session = {SESSION_KEY_SAML_LOGOUT_RETURN: session_return_url}
         request.brand = self.brand
 
         view = SPInitiatedSLOBindingRedirectView()
@@ -255,7 +256,7 @@ class TestSPInitiatedSLOViews(TestCase):
                 "SAMLResponse": "dummy-response",
             },
         )
-        request.session = {"saml_logout_return_url": session_return_url}
+        request.session = {SESSION_KEY_SAML_LOGOUT_RETURN: session_return_url}
         request.brand = self.brand
 
         view = SPInitiatedSLOBindingPOSTView()
