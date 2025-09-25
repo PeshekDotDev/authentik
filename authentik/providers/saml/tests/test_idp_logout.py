@@ -1,7 +1,7 @@
 """Test IdP Logout Stages"""
 
 import base64
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 from django.test import RequestFactory, TestCase
 
@@ -16,7 +16,11 @@ from authentik.providers.saml.idp_logout import (
     SAMLLogoutStageView,
 )
 from authentik.providers.saml.models import SAMLProvider
-from authentik.providers.saml.views.flows import SESSION_KEY_SAML_LOGOUT_RETURN
+from authentik.providers.saml.views.flows import (
+    PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS,
+    PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS,
+    SESSION_KEY_SAML_LOGOUT_RETURN,
+)
 from authentik.sources.saml.processors.constants import (
     RSA_SHA256,
     SAML_NAME_ID_FORMAT_EMAIL,
@@ -40,6 +44,7 @@ class TestSAMLLogoutStageView(TestCase):
             issuer="https://idp.example.com",
             sp_binding="redirect",
             sls_binding="redirect",
+            logout_method="frontchannel_redirect",
         )
 
         self.provider2 = SAMLProvider.objects.create(
@@ -50,6 +55,7 @@ class TestSAMLLogoutStageView(TestCase):
             issuer="https://idp.example.com",
             sp_binding="post",
             sls_binding="post",
+            logout_method="frontchannel_redirect",
         )
 
     def test_encode_decode_relay_state(self):
@@ -80,19 +86,18 @@ class TestSAMLLogoutStageView(TestCase):
     def test_get_challenge_with_pending_providers_redirect(self):
         """Test get_challenge when there are pending providers with redirect binding"""
         request = self.factory.get("/")
-        request.session = {
-            "saml_logout_pending": [
-                {
-                    "provider_pk": self.provider1.pk,
-                    "name_id": "user1@example.com",
-                    "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
-                    "session_index": "session-123",
-                }
-            ]
-        }
+        request.session = {}
         request.build_absolute_uri = Mock(return_value="https://idp.example.com/flow/test-flow")
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS] = [
+            {
+                "provider_pk": str(self.provider1.pk),
+                "name_id": "user1@example.com",
+                "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
+                "session_index": "session-123",
+            }
+        ]
         stage_view = SAMLLogoutStageView(
             FlowExecutorView(
                 request=request,
@@ -111,7 +116,7 @@ class TestSAMLLogoutStageView(TestCase):
         self.assertIn("redirect_url", challenge.initial_data)
 
         # Should have removed the provider from pending list
-        self.assertEqual(len(request.session["saml_logout_pending"]), 0)
+        self.assertEqual(len(plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS, [])), 0)
 
         # Should have stored return URL in session
         self.assertEqual(
@@ -122,19 +127,18 @@ class TestSAMLLogoutStageView(TestCase):
     def test_get_challenge_with_pending_providers_post(self):
         """Test get_challenge when there are pending providers with POST binding"""
         request = self.factory.get("/")
-        request.session = {
-            "saml_logout_pending": [
-                {
-                    "provider_pk": self.provider2.pk,
-                    "name_id": "user2@example.com",
-                    "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
-                    "session_index": "session-456",
-                }
-            ]
-        }
+        request.session = {}
         request.build_absolute_uri = Mock(return_value="https://idp.example.com/flow/test-flow")
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS] = [
+            {
+                "provider_pk": str(self.provider2.pk),
+                "name_id": "user2@example.com",
+                "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
+                "session_index": "session-456",
+            }
+        ]
         stage_view = SAMLLogoutStageView(
             FlowExecutorView(
                 request=request,
@@ -157,9 +161,10 @@ class TestSAMLLogoutStageView(TestCase):
     def test_get_challenge_all_complete(self):
         """Test get_challenge when all providers are done"""
         request = self.factory.get("/")
-        request.session = {"saml_logout_pending": []}  # No pending providers
+        request.session = {}
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS] = []  # No pending providers
         stage_view = SAMLLogoutStageView(
             FlowExecutorView(
                 request=request,
@@ -178,19 +183,18 @@ class TestSAMLLogoutStageView(TestCase):
     def test_get_challenge_provider_not_found(self):
         """Test get_challenge when provider doesn't exist"""
         request = self.factory.get("/")
-        request.session = {
-            "saml_logout_pending": [
-                {
-                    "provider_pk": 999999,  # Non-existent provider
-                    "name_id": "user@example.com",
-                    "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
-                    "session_index": "session-789",
-                }
-            ]
-        }
+        request.session = {}
         request.build_absolute_uri = Mock(return_value="https://idp.example.com/flow/test-flow")
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS] = [
+            {
+                "provider_pk": "999999",  # Non-existent provider
+                "name_id": "user@example.com",
+                "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
+                "session_index": "session-789",
+            }
+        ]
         stage_view = SAMLLogoutStageView(
             FlowExecutorView(
                 request=request,
@@ -212,17 +216,10 @@ class TestSAMLLogoutStageView(TestCase):
     def test_challenge_valid_continues_flow(self):
         """Test challenge_valid continues to next provider or completes"""
         request = self.factory.post("/")
-        # Create a mock session with flush method
-        mock_session = MagicMock()
-        mock_session.__getitem__ = Mock(
-            side_effect=lambda k: [] if k == "saml_logout_pending" else None
-        )
-        mock_session.__setitem__ = Mock()
-        mock_session.get = Mock(return_value=[])
-        mock_session.flush = Mock()
-        request.session = mock_session
+        request.session = {}
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS] = []
         executor = FlowExecutorView(
             request=request,
             flow=self.flow,
@@ -244,9 +241,6 @@ class TestSAMLLogoutStageView(TestCase):
         # Should call stage_ok when complete and return its value
         executor.stage_ok.assert_called_once()
 
-        # Session should be flushed
-        mock_session.flush.assert_called_once()
-
 
 class TestSAMLIframeLogoutStageView(TestCase):
     """Test SAMLIframeLogoutStageView (parallel iframe logout)"""
@@ -265,6 +259,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
             issuer="https://idp.example.com",
             sp_binding="redirect",
             sls_binding="redirect",
+            logout_method="frontchannel_iframe",
         )
 
         self.provider2 = SAMLProvider.objects.create(
@@ -275,30 +270,30 @@ class TestSAMLIframeLogoutStageView(TestCase):
             issuer="https://idp.example.com",
             sp_binding="post",
             sls_binding="post",
+            logout_method="frontchannel_iframe",
         )
 
     def test_get_challenge_with_multiple_providers(self):
         """Test get_challenge generates logout URLs for all providers"""
         request = self.factory.get("/")
-        request.session = {
-            "saml_logout_pending": [
-                {
-                    "provider_pk": self.provider1.pk,
-                    "name_id": "user@example.com",
-                    "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
-                    "session_index": "session-123",
-                },
-                {
-                    "provider_pk": self.provider2.pk,
-                    "name_id": "user@example.com",
-                    "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
-                    "session_index": "session-456",
-                },
-            ]
-        }
+        request.session = {}
         request.build_absolute_uri = Mock(return_value="https://idp.example.com/flow/test-flow")
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS] = [
+            {
+                "provider_pk": str(self.provider1.pk),
+                "name_id": "user@example.com",
+                "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
+                "session_index": "session-123",
+            },
+            {
+                "provider_pk": str(self.provider2.pk),
+                "name_id": "user@example.com",
+                "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
+                "session_index": "session-456",
+            },
+        ]
         stage_view = SAMLIframeLogoutStageView(
             FlowExecutorView(
                 request=request,
@@ -332,25 +327,24 @@ class TestSAMLIframeLogoutStageView(TestCase):
     def test_get_challenge_with_provider_error(self):
         """Test get_challenge handles provider errors gracefully"""
         request = self.factory.get("/")
-        request.session = {
-            "saml_logout_pending": [
-                {
-                    "provider_pk": 999999,  # Non-existent provider
-                    "name_id": "user@example.com",
-                    "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
-                    "session_index": "session-789",
-                },
-                {
-                    "provider_pk": self.provider1.pk,
-                    "name_id": "user@example.com",
-                    "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
-                    "session_index": "session-123",
-                },
-            ]
-        }
+        request.session = {}
         request.build_absolute_uri = Mock(return_value="https://idp.example.com/flow/test-flow")
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS] = [
+            {
+                "provider_pk": "999999",  # Non-existent provider
+                "name_id": "user@example.com",
+                "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
+                "session_index": "session-789",
+            },
+            {
+                "provider_pk": str(self.provider1.pk),
+                "name_id": "user@example.com",
+                "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
+                "session_index": "session-123",
+            },
+        ]
         stage_view = SAMLIframeLogoutStageView(
             FlowExecutorView(
                 request=request,
@@ -371,20 +365,13 @@ class TestSAMLIframeLogoutStageView(TestCase):
             self.assertEqual(len(logout_urls), 1)  # Only valid provider
             self.assertEqual(logout_urls[0]["provider_name"], "test-provider-1")
 
-    def test_challenge_valid_flushes_session(self):
-        """Test challenge_valid flushes the session"""
+    def test_challenge_valid_completes_stage(self):
+        """Test challenge_valid completes the stage"""
         request = self.factory.post("/")
-        # Create a mock session with flush method
-        mock_session = MagicMock()
-        mock_session.__getitem__ = Mock(
-            side_effect=lambda k: [] if k == "saml_logout_pending" else "test"
-        )
-        mock_session.__setitem__ = Mock()
-        mock_session.get = Mock(return_value="test")
-        mock_session.flush = Mock()
-        request.session = mock_session
+        request.session = {SESSION_KEY_SAML_LOGOUT_RETURN: "test"}
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
+        plan.context[PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS] = []
         executor = FlowExecutorView(
             request=request,
             flow=self.flow,
@@ -397,11 +384,11 @@ class TestSAMLIframeLogoutStageView(TestCase):
         response = Mock()
         stage_view.challenge_valid(response)
 
-        # Should flush session
-        mock_session.flush.assert_called_once()
-
         # Should call stage_ok
         executor.stage_ok.assert_called_once()
+
+        # Should clear the session key
+        self.assertNotIn(SESSION_KEY_SAML_LOGOUT_RETURN, request.session)
 
     def test_process_session_for_logout_redirect(self):
         """Test _process_session_for_logout with redirect binding"""
@@ -419,7 +406,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
         )
 
         session_data = {
-            "provider_pk": self.provider1.pk,
+            "provider_pk": str(self.provider1.pk),
             "name_id": "user@example.com",
             "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
             "session_index": "session-123",
@@ -450,7 +437,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
         )
 
         session_data = {
-            "provider_pk": self.provider2.pk,
+            "provider_pk": str(self.provider2.pk),
             "name_id": "user@example.com",
             "name_id_format": SAML_NAME_ID_FORMAT_EMAIL,
             "session_index": "session-456",
@@ -493,6 +480,7 @@ class TestIdPLogoutIntegration(FlowTestCase):
             signing_kp=self.keypair,
             sign_logout_request=True,
             signature_algorithm=RSA_SHA256,
+            logout_method="frontchannel_redirect",
         )
 
     def test_relay_state_preservation(self):

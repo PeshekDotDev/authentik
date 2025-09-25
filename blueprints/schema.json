@@ -15557,10 +15557,6 @@
                         ]
                     },
                     "title": "Flow set"
-                },
-                "saml_redirect_logout": {
-                    "type": "boolean",
-                    "title": "Saml redirect logout"
                 }
             },
             "required": []

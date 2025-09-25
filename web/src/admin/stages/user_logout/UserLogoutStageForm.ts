@@ -1,5 +1,4 @@
 import "#elements/forms/HorizontalFormElement";
-import "#components/ak-switch-input";
 
 import { DEFAULT_CONFIG } from "#common/api/config";
 
@@ -41,15 +40,7 @@ export class UserLogoutStageForm extends BaseStageForm<UserLogoutStage> {
                     class="pf-c-form-control"
                     required
                 />
-            </ak-form-element-horizontal>
-            <ak-switch-input
-                name="samlRedirectLogout"
-                label=${msg("Redirect based SAML Single Logout")}
-                ?checked=${!!this.instance?.samlRedirectLogout}
-                help=${msg(
-                    "When enabled, SAML Single Logout will use a redirect chain instead of IFrames",
-                )}
-            ></ak-switch-input>`;
+            </ak-form-element-horizontal>`;
     }
 }
 

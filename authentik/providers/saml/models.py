@@ -219,9 +219,9 @@ class SAMLProvider(Provider):
         default="frontchannel_iframe",
         help_text=_(
             "Method to use for logout. Front-channel iframe loads all logout URLs simultaneously "
-            "in hidden iframes. Front-channel redirect redirects through each logout URL sequentially. "
-            "Back-channel sends logout requests directly from the server without user interaction "
-            "(requires POST SLS binding)."
+            "in hidden iframes. Front-channel redirect redirects through each logout URL "
+            "sequentially. Back-channel sends logout requests directly from the server without "
+            "user interaction (requires POST SLS binding)."
         ),
     )
 

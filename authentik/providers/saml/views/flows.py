@@ -37,7 +37,8 @@ REQUEST_KEY_RELAY_STATE = "RelayState"
 
 PLAN_CONTEXT_SAML_AUTH_N_REQUEST = "authentik/providers/saml/authn_request"
 PLAN_CONTEXT_SAML_LOGOUT_REQUEST = "authentik/providers/saml/logout_request"
-PLAN_CONTEXT_SAML_LOGOUT_SESSIONS = "authentik/providers/saml/logout_sessions"
+PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS = "saml_logout_redirect_sessions"
+PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS = "saml_logout_iframe_sessions"
 SESSION_KEY_SAML_LOGOUT_RETURN = "saml_logout_return_url"
 
 

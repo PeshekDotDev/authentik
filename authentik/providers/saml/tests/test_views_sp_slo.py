@@ -84,9 +84,9 @@ class TestSPInitiatedSLOViews(TestCase):
         result = view.check_saml_request()
         self.assertIsNone(result)  # None means success
 
-        # Verify logout request was stored in session
-        self.assertIn("authentik/providers/saml/logout_request", request.session)
-        logout_request = request.session["authentik/providers/saml/logout_request"]
+        # Verify logout request was stored in plan context
+        self.assertIn("authentik/providers/saml/logout_request", view.plan_context)
+        logout_request = view.plan_context["authentik/providers/saml/logout_request"]
         self.assertEqual(logout_request.issuer, self.provider.issuer)
         self.assertEqual(logout_request.session_index, "test-session-123")
 
@@ -215,9 +215,9 @@ class TestSPInitiatedSLOViews(TestCase):
         result = view.check_saml_request()
         self.assertIsNone(result)  # None means success
 
-        # Verify logout request was stored in session
-        self.assertIn("authentik/providers/saml/logout_request", request.session)
-        logout_request = request.session["authentik/providers/saml/logout_request"]
+        # Verify logout request was stored in plan context
+        self.assertIn("authentik/providers/saml/logout_request", view.plan_context)
+        logout_request = view.plan_context["authentik/providers/saml/logout_request"]
         self.assertEqual(logout_request.issuer, self.provider.issuer)
         self.assertEqual(logout_request.session_index, "test-session-123")
 

@@ -13,7 +13,8 @@ from authentik.flows.stage import ChallengeStageView
 from authentik.providers.saml.models import SAMLBindings, SAMLProvider
 from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
 from authentik.providers.saml.views.flows import (
-    PLAN_CONTEXT_SAML_LOGOUT_SESSIONS,
+    PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS,
+    PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS,
     SESSION_KEY_SAML_LOGOUT_RETURN,
 )
 
@@ -82,14 +83,14 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             return ""
 
     def get_pending_providers(self) -> list[dict]:
-        """Get list of SAML providers that need to front-channel logout"""
-        return self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, [])
+        """Get list of SAML providers that need to front-channel redirect logout"""
+        return self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS, [])
 
     def get_challenge(self, *args, **kwargs) -> Challenge:
         """Generate challenge for next provider"""
         pending = self.get_pending_providers()
         if not pending:
-            self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, None)
+            self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS, None)
             return SAMLLogoutChallenge(
                 data={
                     "component": "ak-stage-saml-logout",
@@ -98,7 +99,7 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
             )
 
         session_data = pending.pop(0)
-        self.executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_SESSIONS] = pending
+        self.executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS] = pending
 
         provider = SAMLProvider.objects.filter(pk=session_data.get("provider_pk")).first()
         if not provider:
@@ -263,7 +264,7 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
 
     def get_challenge(self) -> Challenge:
         """Generate iframe logout challenge"""
-        pending = self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, [])
+        pending = self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS, [])
 
         return_url = self.request.build_absolute_uri(
             reverse("authentik_core:if-flow", kwargs={"flow_slug": self.executor.flow.slug})
@@ -278,7 +279,7 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
                 logout_urls.append(logout_data)
 
         # Clear context after processing
-        self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_SESSIONS, None)
+        self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS, None)
 
         return SAMLIframeLogoutChallenge(
             data={

@@ -37107,10 +37107,6 @@ paths:
       - $ref: '#/components/parameters/QueryPaginationOrdering'
       - $ref: '#/components/parameters/QueryPaginationPage'
       - $ref: '#/components/parameters/QueryPaginationPageSize'
-      - in: query
-        name: saml_redirect_logout
-        schema:
-          type: boolean
       - $ref: '#/components/parameters/QuerySearch'
       - in: query
         name: stage_uuid
@@ -53125,8 +53121,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlowSetRequest'
-        saml_redirect_logout:
-          type: boolean
     PatchedUserOAuthSourceConnectionRequest:
       type: object
       description: User source connection
@@ -58962,8 +58956,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlowSet'
-        saml_redirect_logout:
-          type: boolean
       required:
       - component
       - meta_model_name
@@ -58982,8 +58974,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FlowSetRequest'
-        saml_redirect_logout:
-          type: boolean
       required:
       - name
     UserMatchingModeEnum:

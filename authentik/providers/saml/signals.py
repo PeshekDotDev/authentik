@@ -10,7 +10,10 @@ from authentik.flows.models import in_memory_stage
 from authentik.flows.signals import flow_pre_user_logout
 from authentik.providers.saml.models import SAMLSession
 from authentik.providers.saml.tasks import send_saml_logout_request
-from authentik.providers.saml.views.flows import PLAN_CONTEXT_SAML_LOGOUT_SESSIONS
+from authentik.providers.saml.views.flows import (
+    PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS,
+    PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS,
+)
 from authentik.stages.user_logout.models import UserLogoutStage
 
 LOGGER = get_logger()
@@ -33,62 +36,83 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
     if not auth_session:
         return
 
-    # Get frontchannel SAML sessions that need logout
-    frontchannel_sessions = SAMLSession.objects.filter(
-        session=auth_session,
-        user=user,
-        expires__gt=timezone.now(),
-        expiring=True,
-        provider__sls_url__isnull=False,
-    ).exclude(
-        provider__logout_method="backchannel"
-    ).select_related("provider")
+    # Get all frontchannel SAML sessions that need logout
+    all_sessions = (
+        SAMLSession.objects.filter(
+            session=auth_session,
+            user=user,
+            expires__gt=timezone.now(),
+            expiring=True,
+            provider__sls_url__isnull=False,
+        )
+        .exclude(provider__logout_method="backchannel")
+        .select_related("provider")
+    )
 
-    if not frontchannel_sessions.exists():
+    if not all_sessions.exists():
         LOGGER.debug("No SAML sessions requiring frontchannel logout")
         return
 
-    # Prepare session data for logout stages
-    session_data = [
-        {
+    # Separate sessions by logout method
+    iframe_sessions = []
+    redirect_sessions = []
+
+    for session in all_sessions:
+        session_data = {
             "provider_pk": str(session.provider.pk),
             "session_index": session.session_index,
             "name_id": session.name_id,
             "name_id_format": session.name_id_format,
         }
-        for session in frontchannel_sessions
-    ]
 
-    # Store in flow plan context
-    executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_SESSIONS] = session_data
+        if session.provider.logout_method == "frontchannel_redirect":
+            redirect_sessions.append(session_data)
+        else:  # frontchannel_iframe is the default
+            iframe_sessions.append(session_data)
 
-    # Inject appropriate SAML logout stage based on configuration
-    # Check if any session uses redirect method
-    uses_redirect = any(
-        SAMLSession.objects.filter(
-            session=auth_session,
-            provider__pk=session["provider_pk"],
-            provider__logout_method="frontchannel_redirect"
-        ).exists()
-        for session in session_data
-    )
+    # Inject stages based on what methods are needed
+    # We use separate context keys for each logout method
+    stages_injected = []
 
-    if uses_redirect:
+    if redirect_sessions:
+        # Store redirect sessions in context for the redirect stage
+        executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_REDIRECT_SESSIONS] = redirect_sessions
+
         from authentik.providers.saml.idp_logout import SAMLLogoutStageView
 
-        saml_stage = in_memory_stage(SAMLLogoutStageView)
-    else:
+        redirect_stage = in_memory_stage(SAMLLogoutStageView)
+        executor.plan.insert_stage(redirect_stage)
+        stages_injected.append("redirect")
+
+        LOGGER.debug(
+            "Injected SAML redirect logout stage",
+            user=user,
+            session_count=len(redirect_sessions),
+        )
+
+    if iframe_sessions:
+        # Store iframe sessions in context for the iframe stage
+        executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS] = iframe_sessions
+
         from authentik.providers.saml.idp_logout import SAMLIframeLogoutStageView
 
-        saml_stage = in_memory_stage(SAMLIframeLogoutStageView)
+        iframe_stage = in_memory_stage(SAMLIframeLogoutStageView)
+        executor.plan.insert_stage(iframe_stage)
+        stages_injected.append("iframe")
 
-    executor.plan.insert_stage(saml_stage)
+        LOGGER.debug(
+            "Injected SAML iframe logout stage",
+            user=user,
+            session_count=len(iframe_sessions),
+        )
 
     LOGGER.debug(
-        "Injected SAML logout stage via signal",
+        "Injected SAML logout stages via signal",
         user=user,
-        session_count=len(session_data),
-        stage_type=saml_stage.__class__.__name__,
+        total_sessions=len(all_sessions),
+        redirect_sessions=len(redirect_sessions),
+        iframe_sessions=len(iframe_sessions),
+        stages=stages_injected,
     )
 
 
