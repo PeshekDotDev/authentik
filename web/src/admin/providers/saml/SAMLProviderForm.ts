@@ -87,6 +87,7 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
             hasSlsUrl: this.hasSlsUrl,
             setSlsBinding,
             hasPostBinding: this.hasPostBinding,
+            logoutMethod: this.logoutMethod,
         });
     }
 }

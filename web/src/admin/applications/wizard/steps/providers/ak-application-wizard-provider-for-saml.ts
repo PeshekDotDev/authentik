@@ -6,7 +6,7 @@ import { ApplicationWizardProviderForm } from "./ApplicationWizardProviderForm.j
 import { type AkCryptoCertificateSearch } from "#admin/common/ak-crypto-certificate-search";
 import { renderForm } from "#admin/providers/saml/SAMLProviderFormForm";
 
-import { SAMLProvider, SpBindingEnum } from "@goauthentik/api";
+import { LogoutMethodEnum, SAMLProvider, SpBindingEnum } from "@goauthentik/api";
 
 import { msg } from "@lit/localize";
 import { customElement, state } from "@lit/reactive-element/decorators.js";
@@ -26,15 +26,21 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
     protected hasPostBinding = false;
 
     @state()
-    protected backchannelPostLogout = false;
+    protected logoutMethod: string = LogoutMethodEnum.FrontchannelIframe;
 
     get formValues() {
         const values = super.formValues;
-        // If SLS binding is not POST, ensure backchannel post logout is disabled
-        return {
-            ...super.formValues,
-            backchannelPostLogout: values.slsBinding === SpBindingEnum.Post,
-        };
+        // If SLS binding is redirect, ensure logout method is not backchannel
+        if (
+            values.slsBinding === SpBindingEnum.Redirect &&
+            values.logoutMethod === LogoutMethodEnum.Backchannel
+        ) {
+            return {
+                ...values,
+                logoutMethod: LogoutMethodEnum.FrontchannelIframe,
+            };
+        }
+        return values;
     }
 
     renderForm() {
@@ -57,9 +63,12 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
             const target = ev.target as HTMLInputElement;
             this.hasPostBinding = target.value === SpBindingEnum.Post;
 
-            // If switching to redirect binding, disable backchannel post logout
-            if (target.value === SpBindingEnum.Redirect) {
-                this.backchannelPostLogout = false;
+            // If switching to redirect binding, change logout method from backchannel if needed
+            if (
+                target.value === SpBindingEnum.Redirect &&
+                this.logoutMethod === LogoutMethodEnum.Backchannel
+            ) {
+                this.logoutMethod = LogoutMethodEnum.FrontchannelIframe;
             }
 
             this.requestUpdate();
@@ -76,6 +85,7 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
                     hasSlsUrl: this.hasSlsUrl,
                     setSlsBinding,
                     hasPostBinding: this.hasPostBinding,
+                    logoutMethod: this.logoutMethod,
                 })}
             </form>`;
     }
