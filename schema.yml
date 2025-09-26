@@ -46629,6 +46629,10 @@ components:
           type: string
           title: Back-Channel Logout URI
           format: uri
+        frontchannel_logout_uri:
+          type: string
+          title: Front-Channel Logout URI
+          format: uri
         sub_mode:
           allOf:
           - $ref: '#/components/schemas/SubModeEnum'
@@ -46739,6 +46743,10 @@ components:
         backchannel_logout_uri:
           type: string
           title: Back-Channel Logout URI
+          format: uri
+        frontchannel_logout_uri:
+          type: string
+          title: Front-Channel Logout URI
           format: uri
         sub_mode:
           allOf:
@@ -51653,6 +51661,10 @@ components:
         backchannel_logout_uri:
           type: string
           title: Back-Channel Logout URI
+          format: uri
+        frontchannel_logout_uri:
+          type: string
+          title: Front-Channel Logout URI
           format: uri
         sub_mode:
           allOf:
