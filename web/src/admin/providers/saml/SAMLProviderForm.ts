@@ -67,7 +67,6 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
 
             const value = akTextInput.value || "";
             this.hasSlsUrl = !!value;
-            this.requestUpdate();
         };
 
         const setSlsBinding = (ev: Event) => {
@@ -81,8 +80,11 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
             ) {
                 this.logoutMethod = LogoutMethodEnum.FrontchannelIframe;
             }
+        };
 
-            this.requestUpdate();
+        const setLogoutMethod = (ev: Event) => {
+            const target = ev.target as HTMLInputElement;
+            this.logoutMethod = target.value;
         };
 
         return renderForm({
@@ -94,6 +96,7 @@ export class SAMLProviderFormPage extends BaseProviderForm<SAMLProvider> {
             setSlsBinding,
             hasPostBinding: this.hasPostBinding,
             logoutMethod: this.logoutMethod,
+            setLogoutMethod,
         });
     }
 }

@@ -71,7 +71,8 @@ function renderHasSlsUrl(
     provider: Partial<SAMLProvider>,
     hasPostBinding: boolean = false,
     setSlsBinding: (ev: Event) => void,
-    logoutMethod?: string,
+    logoutMethod: string,
+    setLogoutMethod?: (ev: Event) => void,
 ) {
     const logoutMethodOptions: RadioOption<string>[] = [
         {
@@ -105,8 +106,9 @@ function renderHasSlsUrl(
             label=${msg("Logout Method")}
             name="logoutMethod"
             .options=${logoutMethodOptions}
-            .value=${provider?.logoutMethod || logoutMethod || LogoutMethodEnum.FrontchannelIframe}
+            .value=${logoutMethod}
             help=${msg("Method to use for logout when SLS URL is configured.")}
+            @change=${setLogoutMethod}
         >
         </ak-radio-input>`;
 }
@@ -119,7 +121,8 @@ export interface SAMLProviderFormProps {
     hasSlsUrl: boolean;
     setSlsBinding: (ev: Event) => void;
     hasPostBinding: boolean;
-    logoutMethod?: string;
+    logoutMethod: string;
+    setLogoutMethod?: (ev: Event) => void;
 }
 
 export function renderForm({
@@ -132,6 +135,7 @@ export function renderForm({
     setSlsBinding,
     hasPostBinding,
     logoutMethod,
+    setLogoutMethod,
 }: SAMLProviderFormProps) {
     return html` <ak-text-input
             name="name"
@@ -195,7 +199,13 @@ export function renderForm({
                     @input=${setHasSlsUrl}
                 ></ak-text-input>
                 ${hasSlsUrl
-                    ? renderHasSlsUrl(provider, hasPostBinding, setSlsBinding, logoutMethod)
+                    ? renderHasSlsUrl(
+                          provider,
+                          hasPostBinding,
+                          setSlsBinding,
+                          logoutMethod,
+                          setLogoutMethod,
+                      )
                     : nothing}
                 <ak-text-input
                     name="audience"

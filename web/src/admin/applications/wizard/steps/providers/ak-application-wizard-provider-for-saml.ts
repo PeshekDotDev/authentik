@@ -56,7 +56,6 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
 
             const value = akTextInput.value || "";
             this.hasSlsUrl = !!value;
-            this.requestUpdate();
         };
 
         const setSlsBinding = (ev: Event) => {
@@ -70,8 +69,11 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
             ) {
                 this.logoutMethod = LogoutMethodEnum.FrontchannelIframe;
             }
+        };
 
-            this.requestUpdate();
+        const setLogoutMethod = (ev: Event) => {
+            const target = ev.target as HTMLInputElement;
+            this.logoutMethod = target.value;
         };
 
         return html` <ak-wizard-title>${this.label}</ak-wizard-title>
@@ -86,6 +88,7 @@ export class ApplicationWizardProviderSamlForm extends ApplicationWizardProvider
                     setSlsBinding,
                     hasPostBinding: this.hasPostBinding,
                     logoutMethod: this.logoutMethod,
+                    setLogoutMethod,
                 })}
             </form>`;
     }
