@@ -8,6 +8,7 @@ from structlog.stdlib import get_logger
 from authentik.core.models import AuthenticatedSession, User
 from authentik.flows.models import in_memory_stage
 from authentik.flows.signals import flow_pre_user_logout
+from authentik.providers.oauth2.models import AccessToken
 from authentik.providers.saml.models import LogoutMethods, SAMLSession
 from authentik.providers.saml.tasks import send_saml_logout_request
 from authentik.providers.saml.views.flows import (
@@ -18,10 +19,13 @@ from authentik.stages.user_logout.models import UserLogoutStage
 
 LOGGER = get_logger()
 
+# Add context key for OIDC iframe logout sessions
+PLAN_CONTEXT_OIDC_LOGOUT_IFRAME_SESSIONS = "oidc_logout_iframe_sessions"
+
 
 @receiver(flow_pre_user_logout)
 def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
-    """Handle SAML logout when user logs out via flow"""
+    """Handle SAML and OIDC logout when user logs out via flow"""
 
     # Only proceed if this is actually a UserLogoutStage
     if not isinstance(executor.current_stage, UserLogoutStage):
@@ -30,14 +34,14 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
     try:
         auth_session = AuthenticatedSession.from_request(request, user)
     except ValueError:
-        LOGGER.debug("No authenticated session found for SAML logout")
+        LOGGER.debug("No authenticated session found for logout")
         return
 
     if not auth_session:
         return
 
     # Get all frontchannel SAML sessions that need logout
-    all_sessions = (
+    all_saml_sessions = (
         SAMLSession.objects.filter(
             session=auth_session,
             user=user,
@@ -49,15 +53,26 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
         .select_related("provider")
     )
 
-    if not all_sessions.exists():
-        LOGGER.debug("No SAML sessions requiring frontchannel logout")
+    # Get all OIDC sessions with frontchannel logout URIs
+    oidc_access_tokens = (
+        AccessToken.objects.filter(
+            user=user, session=auth_session, provider__frontchannel_logout_uri__isnull=False
+        )
+        .exclude(provider__frontchannel_logout_uri="")
+        .select_related("provider")
+    )
+
+    if not all_saml_sessions.exists() and not oidc_access_tokens.exists():
+        LOGGER.debug("No sessions requiring frontchannel logout")
         return
 
     # Separate sessions by logout method
     iframe_sessions = []
     redirect_sessions = []
+    oidc_sessions = []
 
-    for session in all_sessions:
+    # Process SAML sessions
+    for session in all_saml_sessions:
         session_data = {
             "provider_pk": str(session.provider.pk),
             "session_index": session.session_index,
@@ -69,6 +84,22 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
             redirect_sessions.append(session_data)
         else:  # frontchannel_iframe is the default
             iframe_sessions.append(session_data)
+
+    # Process OIDC sessions (always use iframe for OIDC frontchannel)
+    for token in oidc_access_tokens:
+        # Get the raw JWT for the id_token
+        id_token_dict = token.id_token.to_dict()
+        id_token_jwt = token.id_token.to_jwt(token.provider)
+
+        session_data = {
+            "provider_pk": str(token.provider.pk),
+            "id_token": {
+                **id_token_dict,
+                "raw": id_token_jwt,  # Include the raw JWT for logout
+            },
+            "session_id": auth_session.session.session_key,
+        }
+        oidc_sessions.append(session_data)
 
     # Inject stages based on what methods are needed
     # We use separate context keys for each logout method
@@ -90,9 +121,13 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
             session_count=len(redirect_sessions),
         )
 
-    if iframe_sessions:
-        # Store iframe sessions in context for the iframe stage
-        executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS] = iframe_sessions
+    # Combine SAML iframe sessions and OIDC sessions (both use iframe method)
+    if iframe_sessions or oidc_sessions:
+        # Store both SAML and OIDC sessions in their respective contexts
+        if iframe_sessions:
+            executor.plan.context[PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS] = iframe_sessions
+        if oidc_sessions:
+            executor.plan.context[PLAN_CONTEXT_OIDC_LOGOUT_IFRAME_SESSIONS] = oidc_sessions
 
         from authentik.providers.saml.idp_logout import SAMLIframeLogoutStageView
 
@@ -101,17 +136,20 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
         stages_injected.append("iframe")
 
         LOGGER.debug(
-            "Injected SAML iframe logout stage",
+            "Injected iframe logout stage",
             user=user,
-            session_count=len(iframe_sessions),
+            saml_session_count=len(iframe_sessions),
+            oidc_session_count=len(oidc_sessions),
         )
 
     LOGGER.debug(
-        "Injected SAML logout stages via signal",
+        "Injected logout stages via signal",
         user=user,
-        total_sessions=len(all_sessions),
+        total_saml_sessions=len(all_saml_sessions),
+        total_oidc_sessions=len(oidc_sessions),
         redirect_sessions=len(redirect_sessions),
         iframe_sessions=len(iframe_sessions),
+        oidc_sessions=len(oidc_sessions),
         stages=stages_injected,
     )
 
