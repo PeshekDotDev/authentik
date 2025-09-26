@@ -7,8 +7,8 @@ from authentik.providers.saml.api.providers import SAMLProviderViewSet
 
 # Import logout stages to ensure challenges are discovered by schema generation
 from authentik.providers.saml.idp_logout import (  # noqa: F401
-    SAMLIframeLogoutChallenge,
-    SAMLIframeLogoutStageView,
+    IframeLogoutChallenge,
+    IframeLogoutStageView,
     SAMLLogoutChallenge,
     SAMLLogoutStageView,
 )

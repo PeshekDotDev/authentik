@@ -1,6 +1,7 @@
-"""SAML Logout stages for automatic injection"""
+"""SAML and OIDC Logout stages for automatic injection"""
 
 import base64
+from urllib.parse import urlencode
 
 from django.http import HttpResponse
 from django.urls import reverse
@@ -10,6 +11,7 @@ from structlog.stdlib import get_logger
 from authentik.core.models import User
 from authentik.flows.challenge import Challenge, ChallengeResponse, HttpChallengeResponse
 from authentik.flows.stage import ChallengeStageView
+from authentik.providers.oauth2.models import OAuth2Provider
 from authentik.providers.saml.models import SAMLBindings, SAMLProvider
 from authentik.providers.saml.processors.logout_request import LogoutRequestProcessor
 from authentik.providers.saml.views.flows import (
@@ -19,6 +21,9 @@ from authentik.providers.saml.views.flows import (
 )
 
 LOGGER = get_logger()
+
+# Import OIDC context key
+PLAN_CONTEXT_OIDC_LOGOUT_IFRAME_SESSIONS = "oidc_logout_iframe_sessions"
 
 
 class SAMLLogoutStageViewBase(ChallengeStageView):
@@ -198,32 +203,32 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
         return HttpChallengeResponse(challenge)
 
 
-class SAMLIframeLogoutChallenge(Challenge):
-    """Challenge for SAML iframe logout"""
+class IframeLogoutChallenge(Challenge):
+    """Challenge for iframe logout"""
 
-    component = CharField(default="ak-stage-saml-iframe-logout")
+    component = CharField(default="ak-stage-iframe-logout")
     logout_urls = ListField(child=DictField())
 
 
-class SAMLIframeLogoutChallengeResponse(ChallengeResponse):
-    """Response for SAML iframe logout"""
+class IframeLogoutChallengeResponse(ChallengeResponse):
+    """Response for iframe logout"""
 
-    component = CharField(default="ak-stage-saml-iframe-logout")
+    component = CharField(default="ak-stage-iframe-logout")
 
 
-class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
-    """SAML Logout stage that handles parallel iframe logout"""
+class IframeLogoutStageView(SAMLLogoutStageViewBase):
+    """SAML and OIDC Logout stage that handles parallel iframe logout"""
 
-    response_class = SAMLIframeLogoutChallengeResponse
+    response_class = IframeLogoutChallengeResponse
 
-    def _process_session_for_logout(
+    def _process_saml_session_for_logout(
         self, session_data: dict, user: User | None, return_url: str
     ) -> dict | None:
-        """Process a single session and return logout data"""
+        """Process a single SAML session and return logout data"""
         provider = SAMLProvider.objects.filter(pk=session_data.get("provider_pk")).first()
         if not provider:
             LOGGER.warning(
-                "Provider not found for logout",
+                "SAML Provider not found for logout",
                 provider_pk=session_data.get("provider_pk"),
             )
             return None
@@ -256,34 +261,91 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
                 }
         except (KeyError, AttributeError) as exc:
             LOGGER.warning(
-                "Failed to generate logout URL",
+                "Failed to generate SAML logout URL",
+                provider_pk=session_data.get("provider_pk"),
+                exc=exc,
+            )
+            return None
+
+    def _process_oidc_session_for_logout(self, session_data: dict, return_url: str) -> dict | None:
+        """Process a single OIDC session and return logout data"""
+        provider = OAuth2Provider.objects.filter(pk=session_data.get("provider_pk")).first()
+        if not provider:
+            LOGGER.warning(
+                "OIDC Provider not found for logout",
+                provider_pk=session_data.get("provider_pk"),
+            )
+            return None
+
+        try:
+            # Get ID token from session data
+            id_token = session_data.get("id_token", {})
+
+            # Build OIDC logout URL with required parameters
+            params = {
+                "id_token_hint": id_token.get("raw", ""),  # The raw JWT token
+                "post_logout_redirect_uri": return_url,
+                "state": session_data.get("session_id", ""),
+            }
+
+            # Remove empty parameters
+            params = {k: v for k, v in params.items() if v}
+
+            logout_url = f"{provider.frontchannel_logout_uri}?{urlencode(params)}"
+
+            return {
+                "url": logout_url,
+                "provider_name": provider.name,
+                "binding": "redirect",  # OIDC frontchannel is always via redirect/GET
+                "provider_type": "oidc",
+            }
+        except (KeyError, AttributeError) as exc:
+            LOGGER.warning(
+                "Failed to generate OIDC logout URL",
                 provider_pk=session_data.get("provider_pk"),
                 exc=exc,
             )
             return None
 
     def get_challenge(self) -> Challenge:
-        """Generate iframe logout challenge"""
-        pending = self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS, [])
+        """Generate iframe logout challenge for both SAML and OIDC"""
+        saml_sessions = self.executor.plan.context.get(PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS, [])
+        oidc_sessions = self.executor.plan.context.get(PLAN_CONTEXT_OIDC_LOGOUT_IFRAME_SESSIONS, [])
 
         return_url = self.request.build_absolute_uri(
             reverse("authentik_core:if-flow", kwargs={"flow_slug": self.executor.flow.slug})
         )
 
         logout_urls = []
-        for session_data in pending:
-            logout_data = self._process_session_for_logout(
+
+        # Process SAML sessions
+        for session_data in saml_sessions:
+            logout_data = self._process_saml_session_for_logout(
                 session_data, user=None, return_url=return_url
             )
             if logout_data:
                 logout_urls.append(logout_data)
 
-        # Clear context after processing
-        self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS, None)
+        # Process OIDC sessions
+        for session_data in oidc_sessions:
+            logout_data = self._process_oidc_session_for_logout(session_data, return_url=return_url)
+            if logout_data:
+                logout_urls.append(logout_data)
 
-        return SAMLIframeLogoutChallenge(
+        # Clear context after generating logout URLs
+        self.executor.plan.context.pop(PLAN_CONTEXT_SAML_LOGOUT_IFRAME_SESSIONS, None)
+        self.executor.plan.context.pop(PLAN_CONTEXT_OIDC_LOGOUT_IFRAME_SESSIONS, None)
+
+        LOGGER.debug(
+            "Generated iframe logout challenge",
+            saml_count=len(saml_sessions),
+            oidc_count=len(oidc_sessions),
+            total_urls=len(logout_urls),
+        )
+
+        return IframeLogoutChallenge(
             data={
-                "component": "ak-stage-saml-iframe-logout",
+                "component": "ak-stage-iframe-logout",
                 "logout_urls": logout_urls,
             }
         )

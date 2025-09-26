@@ -40665,13 +40665,13 @@ components:
       - $ref: '#/components/schemas/FlowErrorChallenge'
       - $ref: '#/components/schemas/FrameChallenge'
       - $ref: '#/components/schemas/IdentificationChallenge'
+      - $ref: '#/components/schemas/IframeLogoutChallenge'
       - $ref: '#/components/schemas/OAuthDeviceCodeChallenge'
       - $ref: '#/components/schemas/OAuthDeviceCodeFinishChallenge'
       - $ref: '#/components/schemas/PasswordChallenge'
       - $ref: '#/components/schemas/PlexAuthenticationChallenge'
       - $ref: '#/components/schemas/PromptChallenge'
       - $ref: '#/components/schemas/RedirectChallenge'
-      - $ref: '#/components/schemas/SAMLIframeLogoutChallenge'
       - $ref: '#/components/schemas/SAMLLogoutChallenge'
       - $ref: '#/components/schemas/SessionEndChallenge'
       - $ref: '#/components/schemas/ShellChallenge'
@@ -40696,13 +40696,13 @@ components:
           ak-stage-flow-error: '#/components/schemas/FlowErrorChallenge'
           xak-flow-frame: '#/components/schemas/FrameChallenge'
           ak-stage-identification: '#/components/schemas/IdentificationChallenge'
+          ak-stage-iframe-logout: '#/components/schemas/IframeLogoutChallenge'
           ak-provider-oauth2-device-code: '#/components/schemas/OAuthDeviceCodeChallenge'
           ak-provider-oauth2-device-code-finish: '#/components/schemas/OAuthDeviceCodeFinishChallenge'
           ak-stage-password: '#/components/schemas/PasswordChallenge'
           ak-source-plex: '#/components/schemas/PlexAuthenticationChallenge'
           ak-stage-prompt: '#/components/schemas/PromptChallenge'
           xak-flow-redirect: '#/components/schemas/RedirectChallenge'
-          ak-stage-saml-iframe-logout: '#/components/schemas/SAMLIframeLogoutChallenge'
           ak-stage-saml-logout: '#/components/schemas/SAMLLogoutChallenge'
           ak-stage-session-end: '#/components/schemas/SessionEndChallenge'
           xak-flow-shell: '#/components/schemas/ShellChallenge'
@@ -42725,13 +42725,13 @@ components:
       - $ref: '#/components/schemas/EmailChallengeResponseRequest'
       - $ref: '#/components/schemas/FrameChallengeResponseRequest'
       - $ref: '#/components/schemas/IdentificationChallengeResponseRequest'
+      - $ref: '#/components/schemas/IframeLogoutChallengeResponseRequest'
       - $ref: '#/components/schemas/OAuthDeviceCodeChallengeResponseRequest'
       - $ref: '#/components/schemas/OAuthDeviceCodeFinishChallengeResponseRequest'
       - $ref: '#/components/schemas/PasswordChallengeResponseRequest'
       - $ref: '#/components/schemas/PlexAuthenticationChallengeResponseRequest'
       - $ref: '#/components/schemas/PromptChallengeResponseRequest'
       - $ref: '#/components/schemas/RedirectChallengeResponseRequest'
-      - $ref: '#/components/schemas/SAMLIframeLogoutChallengeResponseRequest'
       - $ref: '#/components/schemas/SAMLLogoutChallengeResponseRequest'
       - $ref: '#/components/schemas/UserLoginChallengeResponseRequest'
       discriminator:
@@ -42752,13 +42752,13 @@ components:
           ak-stage-email: '#/components/schemas/EmailChallengeResponseRequest'
           xak-flow-frame: '#/components/schemas/FrameChallengeResponseRequest'
           ak-stage-identification: '#/components/schemas/IdentificationChallengeResponseRequest'
+          ak-stage-iframe-logout: '#/components/schemas/IframeLogoutChallengeResponseRequest'
           ak-provider-oauth2-device-code: '#/components/schemas/OAuthDeviceCodeChallengeResponseRequest'
           ak-provider-oauth2-device-code-finish: '#/components/schemas/OAuthDeviceCodeFinishChallengeResponseRequest'
           ak-stage-password: '#/components/schemas/PasswordChallengeResponseRequest'
           ak-source-plex: '#/components/schemas/PlexAuthenticationChallengeResponseRequest'
           ak-stage-prompt: '#/components/schemas/PromptChallengeResponseRequest'
           xak-flow-redirect: '#/components/schemas/RedirectChallengeResponseRequest'
-          ak-stage-saml-iframe-logout: '#/components/schemas/SAMLIframeLogoutChallengeResponseRequest'
           ak-stage-saml-logout: '#/components/schemas/SAMLLogoutChallengeResponseRequest'
           ak-stage-user-login: '#/components/schemas/UserLoginChallengeResponseRequest'
     FlowDesignationEnum:
@@ -44350,6 +44350,36 @@ components:
             repeat users to skip straight to entering their password.
       required:
       - name
+    IframeLogoutChallenge:
+      type: object
+      description: Challenge for iframe logout
+      properties:
+        flow_info:
+          $ref: '#/components/schemas/ContextualFlowInfo'
+        component:
+          type: string
+          default: ak-stage-iframe-logout
+        response_errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/ErrorDetail'
+        logout_urls:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - logout_urls
+    IframeLogoutChallengeResponseRequest:
+      type: object
+      description: Response for iframe logout
+      properties:
+        component:
+          type: string
+          minLength: 1
+          default: ak-stage-iframe-logout
     ImpersonationRequest:
       type: object
       properties:
@@ -46629,6 +46659,10 @@ components:
           type: string
           title: Back-Channel Logout URI
           format: uri
+        frontchannel_logout_uri:
+          type: string
+          title: Front-Channel Logout URI
+          format: uri
         sub_mode:
           allOf:
           - $ref: '#/components/schemas/SubModeEnum'
@@ -46739,6 +46773,10 @@ components:
         backchannel_logout_uri:
           type: string
           title: Back-Channel Logout URI
+          format: uri
+        frontchannel_logout_uri:
+          type: string
+          title: Front-Channel Logout URI
           format: uri
         sub_mode:
           allOf:
@@ -51654,6 +51692,10 @@ components:
           type: string
           title: Back-Channel Logout URI
           format: uri
+        frontchannel_logout_uri:
+          type: string
+          title: Front-Channel Logout URI
+          format: uri
         sub_mode:
           allOf:
           - $ref: '#/components/schemas/SubModeEnum'
@@ -55400,36 +55442,6 @@ components:
           maxLength: 150
       required:
       - name
-    SAMLIframeLogoutChallenge:
-      type: object
-      description: Challenge for SAML iframe logout
-      properties:
-        flow_info:
-          $ref: '#/components/schemas/ContextualFlowInfo'
-        component:
-          type: string
-          default: ak-stage-saml-iframe-logout
-        response_errors:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              $ref: '#/components/schemas/ErrorDetail'
-        logout_urls:
-          type: array
-          items:
-            type: object
-            additionalProperties: {}
-      required:
-      - logout_urls
-    SAMLIframeLogoutChallengeResponseRequest:
-      type: object
-      description: Response for SAML iframe logout
-      properties:
-        component:
-          type: string
-          minLength: 1
-          default: ak-stage-saml-iframe-logout
     SAMLLogoutChallenge:
       type: object
       description: Challenge for SAML logout

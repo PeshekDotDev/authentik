@@ -8447,6 +8447,10 @@
                     "type": "string",
                     "title": "Back-Channel Logout URI"
                 },
+                "frontchannel_logout_uri": {
+                    "type": "string",
+                    "title": "Front-Channel Logout URI"
+                },
                 "sub_mode": {
                     "type": "string",
                     "enum": [
