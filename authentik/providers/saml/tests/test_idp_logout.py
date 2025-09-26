@@ -10,8 +10,8 @@ from authentik.flows.planner import FlowPlan
 from authentik.flows.tests import FlowTestCase
 from authentik.flows.views.executor import FlowExecutorView
 from authentik.providers.saml.idp_logout import (
-    SAMLIframeLogoutChallenge,
-    SAMLIframeLogoutStageView,
+    IframeLogoutChallenge,
+    IframeLogoutStageView,
     SAMLLogoutChallenge,
     SAMLLogoutStageView,
 )
@@ -242,8 +242,8 @@ class TestSAMLLogoutStageView(TestCase):
         executor.stage_ok.assert_called_once()
 
 
-class TestSAMLIframeLogoutStageView(TestCase):
-    """Test SAMLIframeLogoutStageView (parallel iframe logout)"""
+class TestIframeLogoutStageView(TestCase):
+    """Test IframeLogoutStageView (parallel iframe logout)"""
 
     def setUp(self):
         """Set up test fixtures"""
@@ -294,7 +294,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
                 "session_index": "session-456",
             },
         ]
-        stage_view = SAMLIframeLogoutStageView(
+        stage_view = IframeLogoutStageView(
             FlowExecutorView(
                 request=request,
                 flow=self.flow,
@@ -306,7 +306,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
         challenge = stage_view.get_challenge()
 
         # Should return iframe challenge with logout URLs
-        self.assertIsInstance(challenge, SAMLIframeLogoutChallenge)
+        self.assertIsInstance(challenge, IframeLogoutChallenge)
         logout_urls = challenge.initial_data["logout_urls"]
 
         # Should have 2 logout URLs
@@ -345,7 +345,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
                 "session_index": "session-123",
             },
         ]
-        stage_view = SAMLIframeLogoutStageView(
+        stage_view = IframeLogoutStageView(
             FlowExecutorView(
                 request=request,
                 flow=self.flow,
@@ -379,7 +379,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
         )
         executor.stage_ok = Mock(return_value=Mock(status_code=200))
 
-        stage_view = SAMLIframeLogoutStageView(executor, request=request)
+        stage_view = IframeLogoutStageView(executor, request=request)
 
         response = Mock()
         stage_view.challenge_valid(response)
@@ -396,7 +396,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
         request.build_absolute_uri = Mock(return_value="https://idp.example.com/flow/test-flow")
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
-        stage_view = SAMLIframeLogoutStageView(
+        stage_view = IframeLogoutStageView(
             FlowExecutorView(
                 request=request,
                 flow=self.flow,
@@ -427,7 +427,7 @@ class TestSAMLIframeLogoutStageView(TestCase):
         request.build_absolute_uri = Mock(return_value="https://idp.example.com/flow/test-flow")
 
         plan = FlowPlan(flow_pk=self.flow.pk.hex)
-        stage_view = SAMLIframeLogoutStageView(
+        stage_view = IframeLogoutStageView(
             FlowExecutorView(
                 request=request,
                 flow=self.flow,

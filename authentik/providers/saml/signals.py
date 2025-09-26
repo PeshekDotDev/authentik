@@ -129,9 +129,9 @@ def handle_flow_pre_user_logout(sender, request, user, executor, **kwargs):
         if oidc_sessions:
             executor.plan.context[PLAN_CONTEXT_OIDC_LOGOUT_IFRAME_SESSIONS] = oidc_sessions
 
-        from authentik.providers.saml.idp_logout import SAMLIframeLogoutStageView
+        from authentik.providers.saml.idp_logout import IframeLogoutStageView
 
-        iframe_stage = in_memory_stage(SAMLIframeLogoutStageView)
+        iframe_stage = in_memory_stage(IframeLogoutStageView)
         executor.plan.insert_stage(iframe_stage)
         stages_injected.append("iframe")
 

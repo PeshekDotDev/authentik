@@ -2,7 +2,7 @@ import "#flow/components/ak-flow-card";
 
 import { BaseStage } from "#flow/stages/base";
 
-import { FlowChallengeResponseRequest, SAMLIframeLogoutChallenge } from "@goauthentik/api";
+import { FlowChallengeResponseRequest, IframeLogoutChallenge } from "@goauthentik/api";
 
 import { msg } from "@lit/localize";
 import { css, CSSResult, html, nothing, PropertyValues, TemplateResult } from "lit";
@@ -40,9 +40,9 @@ function renderStatusIcon(status: string): TemplateResult | typeof nothing {
     return nothing;
 }
 
-@customElement("ak-stage-saml-iframe-logout")
-export class SAMLIFrameLogoutStage extends BaseStage<
-    SAMLIframeLogoutChallenge,
+@customElement("ak-stage-iframe-logout")
+export class IFrameLogoutStage extends BaseStage<
+    IframeLogoutChallenge,
     FlowChallengeResponseRequest
 > {
     @state()
@@ -215,9 +215,7 @@ export class SAMLIFrameLogoutStage extends BaseStage<
 
         return html`
             <div class="pf-c-progress">
-                <div class="pf-c-progress__description">
-                    ${msg("Logging out of SAML providers...")}
-                </div>
+                <div class="pf-c-progress__description">${msg("Logging out of providers...")}</div>
                 <div class="pf-c-progress__status">
                     <span class="pf-c-progress__measure">${this.completedCount} / ${total}</span>
                 </div>
@@ -241,7 +239,7 @@ export class SAMLIFrameLogoutStage extends BaseStage<
         }
 
         return html`<ak-flow-card .challenge=${this.challenge}>
-            <span slot="title">${msg("SAML Single Logout")}</span>
+            <span slot="title">${msg("Single Logout")}</span>
             <form class="pf-c-form">
                 <div class="pf-c-form__group">${this.renderProgress()}</div>
                 <div class="pf-c-form__group">
@@ -261,6 +259,6 @@ export class SAMLIFrameLogoutStage extends BaseStage<
 
 declare global {
     interface HTMLElementTagNameMap {
-        "ak-stage-saml-iframe-logout": SAMLIFrameLogoutStage;
+        "ak-stage-iframe-logout": IFrameLogoutStage;
     }
 }

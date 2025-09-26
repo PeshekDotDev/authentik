@@ -203,23 +203,23 @@ class SAMLLogoutStageView(SAMLLogoutStageViewBase):
         return HttpChallengeResponse(challenge)
 
 
-class SAMLIframeLogoutChallenge(Challenge):
-    """Challenge for SAML iframe logout"""
+class IframeLogoutChallenge(Challenge):
+    """Challenge for iframe logout"""
 
-    component = CharField(default="ak-stage-saml-iframe-logout")
+    component = CharField(default="ak-stage-iframe-logout")
     logout_urls = ListField(child=DictField())
 
 
-class SAMLIframeLogoutChallengeResponse(ChallengeResponse):
-    """Response for SAML iframe logout"""
+class IframeLogoutChallengeResponse(ChallengeResponse):
+    """Response for iframe logout"""
 
-    component = CharField(default="ak-stage-saml-iframe-logout")
+    component = CharField(default="ak-stage-iframe-logout")
 
 
-class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
+class IframeLogoutStageView(SAMLLogoutStageViewBase):
     """SAML and OIDC Logout stage that handles parallel iframe logout"""
 
-    response_class = SAMLIframeLogoutChallengeResponse
+    response_class = IframeLogoutChallengeResponse
 
     def _process_saml_session_for_logout(
         self, session_data: dict, user: User | None, return_url: str
@@ -343,9 +343,9 @@ class SAMLIframeLogoutStageView(SAMLLogoutStageViewBase):
             total_urls=len(logout_urls),
         )
 
-        return SAMLIframeLogoutChallenge(
+        return IframeLogoutChallenge(
             data={
-                "component": "ak-stage-saml-iframe-logout",
+                "component": "ak-stage-iframe-logout",
                 "logout_urls": logout_urls,
             }
         )
