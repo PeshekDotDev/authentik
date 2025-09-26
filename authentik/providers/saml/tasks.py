@@ -2,7 +2,6 @@
 
 import requests
 from django.contrib.auth import get_user_model
-from django.http import HttpResponseBadRequest
 from dramatiq.actor import actor
 from structlog.stdlib import get_logger
 
@@ -31,70 +30,55 @@ def send_saml_logout_request(
         )
         return False
 
-    try:
-        LOGGER.debug(
-            "Sending SAML logout request",
-            provider=provider.name,
-            session_index=session_index,
-        )
+    LOGGER.debug(
+        "Sending SAML logout request",
+        provider=provider.name,
+        session_index=session_index,
+    )
 
-        # Create the logout request processor with the provided data
-        # Note: We don't need the user object for the logout request itself
-        processor = LogoutRequestProcessor(
-            provider=provider,
-            user=None,  # User might be deleted already
-            destination=sls_url,
-            name_id=name_id,
-            name_id_format=name_id_format,
-            session_index=session_index,
-        )
+    # Create the logout request processor with the provided data
+    # Note: We don't need the user object for the logout request itself
+    processor = LogoutRequestProcessor(
+        provider=provider,
+        user=None,  # User might be deleted already
+        destination=sls_url,
+        name_id=name_id,
+        name_id_format=name_id_format,
+        session_index=session_index,
+    )
 
-        success = send_post_logout_request(provider, processor)
-
-        return success
-
-    except (AttributeError, KeyError, ValueError) as exc:
-        LOGGER.error(
-            "Failed to send SAML logout request",
-            exc=exc,
-            provider_pk=provider_pk,
-            session_index=session_index,
-        )
-        return False
+    return send_post_logout_request(provider, processor)
 
 
 def send_post_logout_request(provider: SAMLProvider, processor: LogoutRequestProcessor) -> bool:
     """Send LogoutRequest using POST binding"""
-    try:
-        encoded_request = processor.encode_post()
+    encoded_request = processor.encode_post()
 
-        # Create form data
-        form_data = {
-            "SAMLRequest": encoded_request,
-        }
+    # Create form data
+    form_data = {
+        "SAMLRequest": encoded_request,
+    }
 
-        # Add RelayState if present
-        if processor.relay_state:
-            form_data["RelayState"] = processor.relay_state
+    # Add RelayState if present
+    if processor.relay_state:
+        form_data["RelayState"] = processor.relay_state
 
-        # Send POST request
-        response = requests.post(
-            provider.sls_url,
-            data=form_data,
-            timeout=10,
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-        )
+    # Send POST request
+    response = requests.post(
+        provider.sls_url,
+        data=form_data,
+        timeout=10,
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        allow_redirects=True,
+    )
+    response.raise_for_status()
 
-        LOGGER.debug(
-            "Sent POST logout request",
-            provider=provider,
-            status_code=response.status_code,
-        )
+    LOGGER.debug(
+        "Sent POST logout request",
+        provider=provider,
+        status_code=response.status_code,
+    )
 
-        return response.status_code < HttpResponseBadRequest.status_code
-
-    except (requests.RequestException, ValueError) as exc:
-        LOGGER.error("Failed to send POST logout request", exc=exc, provider=provider)
-        return False
+    return True
