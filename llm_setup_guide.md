@@ -11,23 +11,43 @@
   - Go: 159 files (outpost services)
   - JavaScript: 41 files
 
-## Recommended Models for RTX 4080 (24GB VRAM)
+## Recommended Models for RTX 5080 (16GB VRAM)
 
 ### Option 1: DeepSeek Coder V2.5 16B (Recommended)
 - **VRAM Usage**: ~10GB (4-bit quantized)
 - **Context Window**: 128K tokens
 - **Best for**: High-quality code generation with large context
+- **Headroom**: ~6GB for context and system overhead
 - **Download**: `deepseek-ai/DeepSeek-Coder-V2-Lite-Base` or `deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct`
 
-### Option 2: Qwen2.5 Coder 32B
-- **VRAM Usage**: ~20GB (4-bit quantized)
-- **Context Window**: 128K tokens
-- **Best for**: Maximum quality, multilingual support
-
-### Option 3: CodeLlama 2 34B
-- **VRAM Usage**: ~20GB (4-bit quantized)
+### Option 2: CodeLlama 2 13B (4-bit)
+- **VRAM Usage**: ~7-8GB (4-bit quantized)
 - **Context Window**: 16K tokens
-- **Best for**: Proven code generation capabilities
+- **Best for**: Proven code generation with good VRAM headroom
+- **Headroom**: ~8GB for context and system overhead
+
+### Option 3: DeepSeek Coder 6.7B (4-bit)
+- **VRAM Usage**: ~4-5GB (4-bit quantized)
+- **Context Window**: 64K tokens
+- **Best for**: Fast inference with maximum context headroom
+- **Headroom**: ~11GB - allows for very large context windows
+
+### Option 4: Qwen2.5 Coder 7B (4-bit)
+- **VRAM Usage**: ~4-5GB (4-bit quantized)
+- **Context Window**: 128K tokens
+- **Best for**: Large context windows with efficient VRAM usage
+- **Headroom**: ~11GB
+
+### Option 5: StarCoder2 15B (4-bit)
+- **VRAM Usage**: ~8-9GB (4-bit quantized)
+- **Context Window**: 16K tokens
+- **Best for**: Code completion and generation tasks
+- **Headroom**: ~7GB
+
+### ⚠️ Models That Won't Fit:
+- Qwen2.5 Coder 32B (~20GB) - Too large
+- CodeLlama 2 34B (~20GB) - Too large
+- DeepSeek Coder V2.5 32B (~20GB) - Too large
 
 ## Setup Instructions
 
@@ -65,13 +85,16 @@ ollama run deepseek-coder:latest
 # Install
 pip install vllm
 
-# Run with 4-bit quantization
+# Run with 4-bit quantization (for 16GB VRAM, use 0.85 to leave headroom)
 python -m vllm.entrypoints.openai.api_server \
     --model deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct \
     --quantization awq \
     --tensor-parallel-size 1 \
-    --gpu-memory-utilization 0.9
+    --gpu-memory-utilization 0.85 \
+    --max-model-len 131072
 ```
+
+**Note for 16GB VRAM**: Use `--gpu-memory-utilization 0.85` (instead of 0.9) to leave headroom for context tokens and avoid OOM errors.
 
 ### 4. Using llama.cpp (Most Flexible)
 
@@ -180,13 +203,16 @@ With ~243,000 lines of code:
 }
 ```
 
-## Performance Tips
+## Performance Tips for 16GB VRAM
 
-1. **Use 4-bit quantization** (AWQ, GPTQ, or GGUF Q4_K_M)
-2. **Batch requests** when possible
-3. **Use flash attention** if supported
-4. **Monitor VRAM usage**: `nvidia-smi`
-5. **Adjust context window** based on available VRAM
+1. **Use 4-bit quantization** (AWQ, GPTQ, or GGUF Q4_K_M) - Essential for fitting models
+2. **Monitor VRAM usage closely**: `watch -n 1 nvidia-smi`
+3. **Start conservative**: Use `--gpu-memory-utilization 0.85` to avoid OOM
+4. **Adjust context window dynamically**: Larger contexts use more VRAM
+5. **Use flash attention** if supported (reduces VRAM usage)
+6. **Consider smaller models** (6.7B-7B) if you need very large contexts (>64K tokens)
+7. **Batch requests carefully**: Each request adds to VRAM usage
+8. **Watch for memory fragmentation**: Restart the server if VRAM usage grows unexpectedly
 
 ## Next Steps
 
