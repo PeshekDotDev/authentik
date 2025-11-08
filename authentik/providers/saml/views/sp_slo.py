@@ -1,6 +1,6 @@
 """SP-initiated SAML Single Logout Views"""
 
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -44,12 +44,21 @@ class SPInitiatedSLOView(PolicyAccessView):
             SAMLProvider, pk=self.application.provider_id
         )
         self.flow = self.provider.invalidation_flow or self.request.brand.flow_invalidation
-        if not self.flow:
-            raise Http404
 
     def check_saml_request(self) -> HttpRequest | None:
         """Handler to verify the SAML Request. Must be implemented by a subclass"""
         raise NotImplementedError
+
+    def _cleanup_saml_session(self) -> None:
+        """Remove SAML session bindings tied to the current user session."""
+        auth_session = AuthenticatedSession.from_request(self.request, self.request.user)
+        if not auth_session:
+            return
+        SAMLSession.objects.filter(
+            session=auth_session,
+            user=self.request.user,
+            provider=self.provider,
+        ).delete()
 
     def get(self, request: HttpRequest, application_slug: str) -> HttpResponse:
         """Verify the SAML Request, and if valid initiate the FlowPlanner for the application"""
@@ -59,6 +68,17 @@ class SPInitiatedSLOView(PolicyAccessView):
         method_response = self.check_saml_request()
         if method_response:
             return method_response
+        if not self.flow:
+            LOGGER.debug(
+                "sp_slo: no invalidation flow configured, falling back to session-end redirect",
+                application_slug=application_slug,
+                provider_pk=self.provider.pk,
+            )
+            self._cleanup_saml_session()
+            return redirect(
+                "authentik_core:if-session-end",
+                application_slug=self.kwargs["application_slug"],
+            )
         planner = FlowPlanner(self.flow)
         planner.allow_empty_flows = True
         plan = planner.plan(
@@ -71,13 +91,7 @@ class SPInitiatedSLOView(PolicyAccessView):
         plan.append_stage(in_memory_stage(SessionEndStage))
 
         # Remove samlsession from database
-        auth_session = AuthenticatedSession.from_request(self.request, self.request.user)
-        if auth_session:
-            SAMLSession.objects.filter(
-                session=auth_session,
-                user=self.request.user,
-                provider=self.provider,
-            ).delete()
+        self._cleanup_saml_session()
         return plan.to_redirect(self.request, self.flow)
 
     def post(self, request: HttpRequest, application_slug: str) -> HttpResponse:

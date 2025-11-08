@@ -385,15 +385,14 @@ class TestSPInitiatedSLOViews(TestCase):
             view.resolve_provider_application()
 
     def test_provider_without_invalidation_flow(self):
-        """Test handling when provider has no invalidation flow and brand has no default"""
-        # Create provider without invalidation flow
+        """Fallback to session-end when neither provider nor brand has invalidation flow"""
         provider = SAMLProvider.objects.create(
             name="no-flow-provider",
             authorization_flow=self.flow,
             acs_url="https://sp2.example.com/acs",
             sls_url="https://sp2.example.com/sls",
             issuer="https://idp2.example.com",
-            invalidation_flow=None,  # No invalidation flow
+            invalidation_flow=None,
         )
 
         app = Application.objects.create(
@@ -402,7 +401,6 @@ class TestSPInitiatedSLOViews(TestCase):
             provider=provider,
         )
 
-        # Brand with no flow_invalidation
         self.brand.flow_invalidation = None
         self.brand.save()
 
@@ -412,9 +410,22 @@ class TestSPInitiatedSLOViews(TestCase):
 
         view = SPInitiatedSLOBindingRedirectView()
         view.setup(request, application_slug=app.slug)
+        view.resolve_provider_application()
+        self.assertIsNone(view.flow)
 
-        with self.assertRaises(Http404):
-            view.resolve_provider_application()
+        with patch.object(view, "_cleanup_saml_session") as cleanup_mock:
+            view.check_saml_request = MagicMock(return_value=None)
+            response = view.get(request, application_slug=app.slug)
+
+        cleanup_mock.assert_called_once()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            reverse(
+                "authentik_core:if-session-end",
+                kwargs={"application_slug": app.slug},
+            ),
+        )
 
     def test_relay_state_decoding_failure(self):
         """Test handling of RelayState that's a path"""
