@@ -143,6 +143,8 @@ Ensure that the Discord OAuth source in **Federation & Social login** has the ad
 4. Provide a name for the policy and set the following expression:
 
 ```python
+from authentik.sources.oauth.models import OAuthSource
+
 # To get the guild ID number for the parameters, open Discord, go to Settings > Advanced and enable developer mode.
 # Right-click on the server/guild title and select "Copy ID" to get the guild ID.
 
@@ -194,6 +196,8 @@ To check if the user is member of a Discord Guild role, you can use the followin
 4. Provide a name for the policy and set the following expression:
 
 ```python
+from authentik.sources.oauth.models import OAuthSource
+
 # To get the guild ID number for the parameters, open Discord, go to Settings > Advanced and enable developer mode.
 # Right-click on the server/guild title and select "Copy ID" to get the guild ID.
 # Right-click on the server/guild title and select server settings > roles, right click on the role and click "Copy ID" to get the role ID.

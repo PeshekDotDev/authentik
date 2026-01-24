@@ -20,7 +20,7 @@ import { SlottedTemplateResult } from "#elements/types";
 import {
     ProvidersApi,
     RACProvider,
-    RbacPermissionsAssignedByUsersListModelEnum,
+    RbacPermissionsAssignedByRolesListModelEnum,
 } from "@goauthentik/api";
 
 import { msg } from "@lit/localize";
@@ -37,7 +37,6 @@ import PFFormControl from "@patternfly/patternfly/components/FormControl/form-co
 import PFList from "@patternfly/patternfly/components/List/list.css";
 import PFPage from "@patternfly/patternfly/components/Page/page.css";
 import PFGrid from "@patternfly/patternfly/layouts/Grid/grid.css";
-import PFBase from "@patternfly/patternfly/patternfly-base.css";
 
 @customElement("ak-provider-rac-view")
 export class RACProviderViewPage extends AKElement {
@@ -48,7 +47,6 @@ export class RACProviderViewPage extends AKElement {
     provider?: RACProvider;
 
     static styles: CSSResult[] = [
-        PFBase,
         PFButton,
         PFPage,
         PFGrid,
@@ -136,7 +134,7 @@ export class RACProviderViewPage extends AKElement {
                     slot="page-permissions"
                     id="page-permissions"
                     aria-label="${msg("Permissions")}"
-                    model=${RbacPermissionsAssignedByUsersListModelEnum.AuthentikProvidersRacRacprovider}
+                    model=${RbacPermissionsAssignedByRolesListModelEnum.AuthentikProvidersRacRacprovider}
                     objectPk=${this.provider.pk}
                 ></ak-rbac-object-permission-page>
             </ak-tabs>

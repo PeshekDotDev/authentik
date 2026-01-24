@@ -56,6 +56,14 @@ class OutgoingSyncProvider(ScheduledModel, Model):
     def get_object_qs[T: User | Group](self, type: type[T]) -> QuerySet[T]:
         raise NotImplementedError
 
+    @classmethod
+    def get_object_mappings(cls, obj: User | Group) -> list[tuple[str, str]]:
+        """
+        Get a list of mapping between User/Group and ProviderUser/Group:
+        [("provider_pk", "obj_pk")]
+        """
+        raise NotImplementedError
+
     def get_paginator[T: User | Group](self, type: type[T]) -> Paginator:
         return Paginator(self.get_object_qs(type), self.sync_page_size)
 
@@ -82,6 +90,10 @@ class OutgoingSyncProvider(ScheduledModel, Model):
     @property
     def sync_actor(self) -> Actor:
         raise NotImplementedError
+
+    def sync_dispatch(self) -> None:
+        for schedule in self.schedules.all():
+            schedule.send()
 
     @property
     def schedule_specs(self) -> list[ScheduleSpec]:

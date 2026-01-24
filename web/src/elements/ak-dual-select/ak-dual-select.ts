@@ -28,7 +28,6 @@ import { createRef, ref } from "lit/directives/ref.js";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 
 import PFButton from "@patternfly/patternfly/components/Button/button.css";
-import PFBase from "@patternfly/patternfly/patternfly-base.css";
 
 function localeComparator(a: DualSelectPair, b: DualSelectPair) {
     const aSortBy = String(a[2] || a[0]);
@@ -37,7 +36,7 @@ function localeComparator(a: DualSelectPair, b: DualSelectPair) {
     return aSortBy.localeCompare(bSortBy);
 }
 
-function keyfinder(key: string) {
+function keyfinder(key: string | number) {
     return ([k]: DualSelectPair) => k === key;
 }
 
@@ -62,7 +61,7 @@ const DelegatedEvents = [
  */
 @customElement("ak-dual-select")
 export class AkDualSelect extends CustomEmitterElement(CustomListenerElement(AKElement)) {
-    static styles = [PFBase, PFButton, globalVariables, mainStyles];
+    static styles = [PFButton, globalVariables, mainStyles];
 
     //#region Properties
 
@@ -98,7 +97,7 @@ export class AkDualSelect extends CustomEmitterElement(CustomListenerElement(AKE
     @state()
     protected selectedFilter: string = "";
 
-    #selectedKeys: Set<string> = new Set();
+    #selectedKeys: Set<string | number> = new Set();
 
     //#endregion
 
@@ -188,7 +187,7 @@ export class AkDualSelect extends CustomEmitterElement(CustomListenerElement(AKE
     // updating the list of currently visible options;
     protected addAllVisible() {
         // Create a new array of all current options and selected, and de-dupe.
-        const selected = new Map<string, DualSelectPair>([
+        const selected = new Map<string | number, DualSelectPair>([
             ...this.options.map((pair) => [pair[0], pair] as const),
             ...this.selected.map((pair) => [pair[0], pair] as const),
         ]);
