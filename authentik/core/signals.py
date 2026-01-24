@@ -8,6 +8,7 @@ from django.db.models import Model
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import Signal, receiver
 from django.http.request import HttpRequest
+from django.utils import timezone
 from structlog.stdlib import get_logger
 
 from authentik.core.models import (
@@ -56,10 +57,49 @@ def user_logged_in_session(sender, request: HttpRequest, user: User, **_):
     layer = get_channel_layer()
     device_cookie = request.COOKIES.get("authentik_device")
     if device_cookie:
+        # Fetch pending OAuth2 requests for this device for multi-tab resumption
+        pending_requests = _get_pending_oauth2_requests(device_cookie)
+
         async_to_sync(layer.group_send)(
             build_device_group(device_cookie),
-            {"type": "event.session.authenticated"},
+            {
+                "type": "event.session.authenticated",
+                "pending_requests": pending_requests,
+            },
         )
+
+
+def _get_pending_oauth2_requests(device_id: str) -> list[dict]:
+    """Get pending OAuth2 requests for a device.
+
+    Returns a list of pending request information that can be used by
+    the frontend to resume OAuth2 flows in other tabs.
+    """
+    # Import here to avoid circular imports
+    from authentik.providers.oauth2.models import PendingOAuth2Request
+
+    pending = PendingOAuth2Request.objects.filter(
+        device_id=device_id,
+        expires__gt=timezone.now(),
+    ).select_related("provider", "provider__application")
+
+    requests = []
+    for req in pending:
+        try:
+            app_name = req.provider.application.name if req.provider.application else None
+        except Exception:
+            app_name = None
+
+        requests.append({
+            "request_id": str(req.request_id),
+            "client_id": req.client_id,
+            "provider_name": req.provider.name,
+            "application_name": app_name,
+            "tab_id": req.tab_id,
+            "is_leader": req.is_leader,
+        })
+
+    return requests
 
 
 @receiver(post_delete, sender=AuthenticatedSession)

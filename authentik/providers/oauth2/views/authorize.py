@@ -56,6 +56,7 @@ from authentik.providers.oauth2.models import (
     AuthorizationCode,
     GrantTypes,
     OAuth2Provider,
+    PendingOAuth2Request,
     RedirectURI,
     RedirectURIMatchingMode,
     ResponseMode,
@@ -74,6 +75,13 @@ LOGGER = get_logger()
 
 PLAN_CONTEXT_PARAMS = "goauthentik.io/providers/oauth2/params"
 SESSION_KEY_LAST_LOGIN_UID = "authentik/providers/oauth2/last_login_uid"
+SESSION_KEY_PENDING_REQUEST_ID = "authentik/providers/oauth2/pending_request_id"
+
+# Cookie name for device identification (set by UserLoginStage)
+COOKIE_NAME_DEVICE = "authentik_device"
+
+# Default expiration for pending OAuth2 requests (24 hours)
+PENDING_REQUEST_EXPIRATION = timedelta(hours=24)
 
 ALLOWED_PROMPT_PARAMS = {PROMPT_NONE, PROMPT_CONSENT, PROMPT_LOGIN}
 FORBIDDEN_URI_SCHEMES = {"javascript", "data", "vbscript"}
@@ -365,7 +373,10 @@ class AuthorizationFlowInitView(BufferedPolicyAccessView):
         except OAuth2Provider.DoesNotExist:
             raise Http404 from None
         if PROMPT_NONE in self.params.prompt and not self.request.user.is_authenticated:
-            # When "prompt" is set to "none" but the user is not logged in, show an error message
+            # When "prompt" is set to "none" but the user is not logged in,
+            # store the request as pending for multi-tab session resumption
+            self._store_pending_request()
+            # Return the standard login_required error
             error = AuthorizeError(
                 self.params.redirect_uri,
                 "login_required",
@@ -373,6 +384,82 @@ class AuthorizationFlowInitView(BufferedPolicyAccessView):
                 self.params.state,
             )
             raise RequestValidationError(error.get_response(self.request))
+
+    def _store_pending_request(self):
+        """Store the OAuth2 request as pending for multi-tab session resumption.
+
+        When prompt=none fails because the user isn't authenticated, we store
+        the request parameters so they can be resumed after authentication
+        completes in another tab.
+        """
+        device_id = self.request.COOKIES.get(COOKIE_NAME_DEVICE)
+        if not device_id:
+            LOGGER.debug("No device cookie, skipping pending request storage")
+            return
+
+        tab_id = self.request.GET.get("tab_id")
+
+        # Check if there's already a pending request for this device and provider
+        existing = PendingOAuth2Request.objects.filter(
+            device_id=device_id,
+            provider=self.params.provider,
+            expires__gt=timezone.now(),
+        ).first()
+
+        if existing:
+            LOGGER.debug(
+                "Updating existing pending OAuth2 request",
+                request_id=str(existing.request_id),
+                device_id=device_id,
+            )
+            # Update existing request with new parameters
+            existing.redirect_uri = self.params.redirect_uri
+            existing.response_type = self.params.response_type
+            existing.response_mode = self.params.response_mode
+            existing.scope = self.params.scope
+            existing.state = self.params.state
+            existing.nonce = self.params.nonce
+            existing.code_challenge = self.params.code_challenge
+            existing.code_challenge_method = self.params.code_challenge_method
+            existing.tab_id = tab_id
+            existing.user_agent = self.request.META.get("HTTP_USER_AGENT", "")
+            existing.expires = timezone.now() + PENDING_REQUEST_EXPIRATION
+            existing.save()
+            return
+
+        # Determine if this tab should be the leader (first tab to create a pending request)
+        has_leader = PendingOAuth2Request.objects.filter(
+            device_id=device_id,
+            is_leader=True,
+            expires__gt=timezone.now(),
+        ).exists()
+
+        pending_request = PendingOAuth2Request(
+            device_id=device_id,
+            provider=self.params.provider,
+            client_id=self.params.client_id,
+            redirect_uri=self.params.redirect_uri,
+            response_type=self.params.response_type,
+            response_mode=self.params.response_mode,
+            scope=self.params.scope,
+            state=self.params.state,
+            nonce=self.params.nonce,
+            code_challenge=self.params.code_challenge,
+            code_challenge_method=self.params.code_challenge_method,
+            tab_id=tab_id,
+            is_leader=not has_leader,  # First tab becomes the leader
+            user_agent=self.request.META.get("HTTP_USER_AGENT", ""),
+            expires=timezone.now() + PENDING_REQUEST_EXPIRATION,
+        )
+        pending_request.save()
+
+        LOGGER.info(
+            "Stored pending OAuth2 request for multi-tab resumption",
+            request_id=str(pending_request.request_id),
+            device_id=device_id,
+            provider=self.params.provider.name,
+            is_leader=pending_request.is_leader,
+        )
 
     def resolve_provider_application(self):
         client_id = self.request.GET.get("client_id")

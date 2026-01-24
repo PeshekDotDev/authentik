@@ -30,8 +30,22 @@ export interface WSMessageRefresh {
     message_type: WSMessageType.Refresh;
 }
 
+/**
+ * Information about a pending OAuth2 request for multi-tab session resumption.
+ */
+export interface PendingOAuth2RequestInfo {
+    request_id: string;
+    client_id: string;
+    provider_name: string;
+    application_name: string | null;
+    tab_id: string | null;
+    is_leader: boolean;
+}
+
 export interface WSMessageSessionAuthenticated {
     message_type: WSMessageType.SessionAuthenticated;
+    /** Pending OAuth2 requests that can be resumed after authentication */
+    pending_requests?: PendingOAuth2RequestInfo[];
 }
 
 export type WSMessage =
@@ -59,8 +73,12 @@ export class AKNotificationEvent extends Event {
 export class AKSessionAuthenticatedEvent extends Event {
     static readonly eventName = "ak-session-authenticated";
 
-    constructor() {
+    /** Pending OAuth2 requests that can be resumed after authentication */
+    public readonly pendingRequests: PendingOAuth2RequestInfo[];
+
+    constructor(pendingRequests: PendingOAuth2RequestInfo[] = []) {
         super(AKSessionAuthenticatedEvent.eventName, { bubbles: true, composed: true });
+        this.pendingRequests = pendingRequests;
     }
 }
 
@@ -85,7 +103,7 @@ export function createEventFromWSMessage(message: WSMessage): Event {
                 composed: true,
             });
         case WSMessageType.SessionAuthenticated:
-            return new AKSessionAuthenticatedEvent();
+            return new AKSessionAuthenticatedEvent(message.pending_requests || []);
         default: {
             throw new TypeError(`Unknown WS message type: ${message satisfies never}`, {
                 cause: message,

@@ -3,6 +3,7 @@
 from django.urls import path
 from django.views.generic.base import RedirectView
 
+from authentik.providers.oauth2.api.pending_requests import PendingOAuth2RequestViewSet
 from authentik.providers.oauth2.api.providers import OAuth2ProviderViewSet
 from authentik.providers.oauth2.api.scopes import ScopeMappingViewSet
 from authentik.providers.oauth2.api.tokens import (
@@ -67,4 +68,5 @@ api_urlpatterns = [
     ("oauth2/authorization_codes", AuthorizationCodeViewSet),
     ("oauth2/refresh_tokens", RefreshTokenViewSet),
     ("oauth2/access_tokens", AccessTokenViewSet),
+    ("oauth2/pending_requests", PendingOAuth2RequestViewSet, "pendingoauth2request"),
 ]

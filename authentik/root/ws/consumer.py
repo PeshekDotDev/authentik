@@ -68,8 +68,17 @@ class MessageConsumer(JsonWebsocketConsumer):
         self.send_json(event)
 
     def event_session_authenticated(self, event: dict):
-        """Event handler post user authentication"""
-        self.send_json({"message_type": "session.authenticated", **event})
+        """Event handler post user authentication.
+
+        Includes pending OAuth2 requests for multi-tab session resumption.
+        """
+        # Extract pending_requests from the event data
+        pending_requests = event.pop("pending_requests", [])
+        self.send_json({
+            "message_type": "session.authenticated",
+            "pending_requests": pending_requests,
+            **event,
+        })
 
     def event_notification(self, event: dict):
         """Event handler for new notifications"""

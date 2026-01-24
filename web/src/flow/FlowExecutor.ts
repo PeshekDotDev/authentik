@@ -16,6 +16,7 @@ import { DEFAULT_CONFIG } from "#common/api/config";
 import { pluckErrorDetail } from "#common/errors/network";
 import { globalAK } from "#common/global";
 import { configureSentry } from "#common/sentry/index";
+import { handleSessionAuthenticated } from "#common/session/multiTab";
 import { applyBackgroundImageProperty } from "#common/theme";
 import { AKSessionAuthenticatedEvent } from "#common/ws/events";
 import { WebsocketClient } from "#common/ws/WebSocketClient";
@@ -170,13 +171,28 @@ export class FlowExecutor
     //#region Listeners
 
     @listen(AKSessionAuthenticatedEvent)
-    protected sessionAuthenticatedListener = () => {
+    protected sessionAuthenticatedListener = async (event: AKSessionAuthenticatedEvent) => {
         if (!document.hidden) {
             return;
         }
 
-        console.debug("authentik/ws: Reloading after session authenticated event");
-        window.location.reload();
+        console.debug("authentik/ws: Processing session authenticated event");
+
+        // Try to handle multi-tab session resumption
+        const redirectUrl = await handleSessionAuthenticated(
+            event.pendingRequests,
+            document.hidden,
+        );
+
+        if (redirectUrl) {
+            // Redirect to resume the OAuth2 flow with original parameters
+            console.debug("authentik/ws: Redirecting to resume OAuth2 flow", { redirectUrl });
+            window.location.href = redirectUrl;
+        } else {
+            // Fall back to simple page reload
+            console.debug("authentik/ws: Reloading after session authenticated event");
+            window.location.reload();
+        }
     };
 
     public disconnectedCallback(): void {

@@ -8,6 +8,7 @@ from functools import cached_property
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse, urlunparse
+from uuid import uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ec import (
     SECP256R1,
@@ -622,3 +623,90 @@ class DeviceToken(InternallyManagedMixin, ExpiringModel):
 
     def __str__(self):
         return f"Device Token for {self.provider_id}"
+
+
+class PendingOAuth2Request(InternallyManagedMixin, ExpiringModel):
+    """Stores pending OAuth2 authorization requests for multi-tab session resumption.
+
+    When a user has multiple tabs open and their session expires, each tab may
+    redirect to authentik with different OAuth2 parameters (different applications).
+    This model stores these pending requests so that after the user authenticates
+    in one tab, all other tabs can resume their OAuth2 flows automatically.
+    """
+
+    request_id = models.UUIDField(primary_key=True, editable=False, default=uuid4)
+
+    # Device identification - groups requests from the same browser/device
+    device_id = models.CharField(
+        max_length=255,
+        db_index=True,
+        help_text=_("Device ID from authentik_device cookie"),
+    )
+
+    # The OAuth2 provider this request is for
+    provider = models.ForeignKey(
+        OAuth2Provider,
+        on_delete=models.CASCADE,
+        help_text=_("The OAuth2 provider for this pending request"),
+    )
+
+    # OAuth2 authorization parameters - stored as JSON for flexibility
+    client_id = models.CharField(max_length=255)
+    redirect_uri = models.TextField()
+    response_type = models.CharField(max_length=50)
+    response_mode = models.CharField(max_length=20, blank=True, null=True)
+    _scope = models.TextField(default="", verbose_name=_("Scopes"))
+    state = models.TextField(blank=True, null=True)
+    nonce = models.TextField(blank=True, null=True)
+    code_challenge = models.CharField(max_length=255, blank=True, null=True)
+    code_challenge_method = models.CharField(max_length=10, blank=True, null=True)
+
+    # Tab identification for coordinating which tab handles interactive login
+    tab_id = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        help_text=_("Unique identifier for the browser tab that created this request"),
+    )
+    is_leader = models.BooleanField(
+        default=False,
+        help_text=_("Whether this tab should handle interactive login"),
+    )
+
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    user_agent = models.TextField(blank=True, help_text=_("User agent for validation"))
+
+    @property
+    def scope(self) -> set[str]:
+        """Return scopes as set of strings"""
+        return set(self._scope.split()) if self._scope else set()
+
+    @scope.setter
+    def scope(self, value: set[str] | list[str]):
+        self._scope = " ".join(value)
+
+    def to_authorization_params_dict(self) -> dict:
+        """Convert to a dictionary that can be used to reconstruct OAuthAuthorizationParams"""
+        return {
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
+            "response_type": self.response_type,
+            "response_mode": self.response_mode or "",
+            "scope": self.scope,
+            "state": self.state or "",
+            "nonce": self.nonce,
+            "code_challenge": self.code_challenge,
+            "code_challenge_method": self.code_challenge_method or "plain",
+        }
+
+    class Meta:
+        verbose_name = _("Pending OAuth2 Request")
+        verbose_name_plural = _("Pending OAuth2 Requests")
+        indexes = ExpiringModel.Meta.indexes + [
+            models.Index(fields=["device_id", "expires"]),
+            models.Index(fields=["device_id", "provider"]),
+        ]
+
+    def __str__(self):
+        return f"Pending OAuth2 Request {self.request_id} for {self.provider_id}"
