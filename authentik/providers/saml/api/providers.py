@@ -431,18 +431,41 @@ class SAMLProviderViewSet(UsedByMixin, ModelViewSet):
             if metadata.sls_binding:
                 provider.sls_binding = metadata.sls_binding
             # Handle keypair updates if metadata contains them
+            # Only update if the certificate has changed to avoid creating duplicates
             if metadata.signing_keypair and metadata.auth_n_request_signed:
-                metadata.signing_keypair.name = (
-                    f"Provider {provider.name} - SAML Signing Certificate"
-                )
-                metadata.signing_keypair.save()
-                provider.verification_kp = metadata.signing_keypair
+                new_cert_data = metadata.signing_keypair.certificate_data
+                existing_kp = provider.verification_kp
+                if existing_kp and existing_kp.certificate_data == new_cert_data:
+                    # Certificate unchanged, keep existing keypair
+                    pass
+                elif existing_kp:
+                    # Certificate changed, update existing keypair
+                    existing_kp.certificate_data = new_cert_data
+                    existing_kp.save()
+                else:
+                    # No existing keypair, create new one
+                    metadata.signing_keypair.name = (
+                        f"Provider {provider.name} - SAML Signing Certificate"
+                    )
+                    metadata.signing_keypair.save()
+                    provider.verification_kp = metadata.signing_keypair
             if metadata.encryption_keypair:
-                metadata.encryption_keypair.name = (
-                    f"Provider {provider.name} - SAML Encryption Certificate"
-                )
-                metadata.encryption_keypair.save()
-                provider.encryption_kp = metadata.encryption_keypair
+                new_cert_data = metadata.encryption_keypair.certificate_data
+                existing_kp = provider.encryption_kp
+                if existing_kp and existing_kp.certificate_data == new_cert_data:
+                    # Certificate unchanged, keep existing keypair
+                    pass
+                elif existing_kp:
+                    # Certificate changed, update existing keypair
+                    existing_kp.certificate_data = new_cert_data
+                    existing_kp.save()
+                else:
+                    # No existing keypair, create new one
+                    metadata.encryption_keypair.name = (
+                        f"Provider {provider.name} - SAML Encryption Certificate"
+                    )
+                    metadata.encryption_keypair.save()
+                    provider.encryption_kp = metadata.encryption_keypair
             provider.save()
             return Response(SAMLProviderSerializer(provider).data)
         except ValueError as exc:
