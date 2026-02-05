@@ -78,6 +78,13 @@ class SAMLProvider(Provider):
         ),
     )
     issuer = models.TextField(help_text=_("Also known as EntityID"), default="authentik")
+    metadata_url = models.TextField(
+        blank=True,
+        default="",
+        validators=[DomainlessURLValidator(schemes=("http", "https"))],
+        verbose_name=_("Metadata URL"),
+        help_text=_("URL to fetch SP metadata from. Used for initial import and refresh."),
+    )
     sls_url = models.TextField(
         blank=True,
         validators=[DomainlessURLValidator(schemes=("http", "https"))],

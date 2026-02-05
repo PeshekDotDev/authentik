@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from guardian.shortcuts import get_objects_for_user
+from requests import RequestException
 from rest_framework.decorators import action
 from rest_framework.fields import CharField, FileField, SerializerMethodField
 from rest_framework.parsers import MultiPartParser
@@ -31,6 +32,7 @@ from authentik.core.api.utils import PassiveSerializer, PropertyMappingPreviewSe
 from authentik.core.models import Provider
 from authentik.crypto.models import KeyType
 from authentik.flows.models import Flow, FlowDesignation
+from authentik.lib.utils.http import get_http_session
 from authentik.providers.saml.models import SAMLLogoutMethods, SAMLProvider
 from authentik.providers.saml.processors.assertion import AssertionProcessor
 from authentik.providers.saml.processors.authn_request_parser import AuthNRequest
@@ -199,6 +201,7 @@ class SAMLProviderSerializer(ProviderSerializer):
             "sls_url",
             "audience",
             "issuer",
+            "metadata_url",
             "assertion_valid_not_before",
             "assertion_valid_not_on_or_after",
             "session_valid_not_on_or_after",
@@ -245,7 +248,15 @@ class SAMLProviderImportSerializer(PassiveSerializer):
     invalidation_flow = PrimaryKeyRelatedField(
         queryset=Flow.objects.filter(designation=FlowDesignation.INVALIDATION),
     )
-    file = FileField()
+    file = FileField(required=False)
+    url = CharField(required=False)
+
+    def validate(self, attrs):
+        if not attrs.get("file") and not attrs.get("url"):
+            raise ValidationError(_("Either file or url must be provided"))
+        if attrs.get("file") and attrs.get("url"):
+            raise ValidationError(_("Provide either file or url, not both"))
+        return attrs
 
 
 class SAMLProviderViewSet(UsedByMixin, ModelViewSet):
@@ -336,26 +347,107 @@ class SAMLProviderViewSet(UsedByMixin, ModelViewSet):
     @validate(SAMLProviderImportSerializer)
     def import_metadata(self, request: Request, body: SAMLProviderImportSerializer) -> Response:
         """Create provider from SAML Metadata"""
-        file = body.validated_data["file"]
+        metadata_url = body.validated_data.get("url")
+
+        # Get raw XML from file or URL
+        if metadata_url:
+            try:
+                response = get_http_session().get(metadata_url)
+                response.raise_for_status()
+                raw_xml = response.content
+            except RequestException as exc:
+                raise ValidationError(
+                    _("Failed to fetch metadata from URL: {error}".format_map({"error": str(exc)}))
+                ) from None
+        else:
+            file = body.validated_data["file"]
+            raw_xml = file.read()
+
         # Validate syntax first
         try:
-            fromstring(file.read())
+            fromstring(raw_xml)
         except ParseError:
             raise ValidationError(_("Invalid XML Syntax")) from None
-        file.seek(0)
+
         try:
-            metadata = ServiceProviderMetadataParser().parse(file.read().decode())
+            metadata = ServiceProviderMetadataParser().parse(raw_xml.decode())
             provider = metadata.to_provider(
                 body.validated_data["name"],
                 body.validated_data["authorization_flow"],
                 body.validated_data["invalidation_flow"],
             )
+            # Store metadata URL for future refresh
+            if metadata_url:
+                provider.metadata_url = metadata_url
+                provider.save()
             # Return the created provider for use in workflows like the application wizard
             return Response(SAMLProviderSerializer(provider).data, status=201)
         except ValueError as exc:  # pragma: no cover
             LOGGER.warning(str(exc))
             raise ValidationError(
                 _("Failed to import Metadata: {messages}".format_map({"messages": str(exc)})),
+            ) from None
+
+    @permission_required(
+        None,
+        ["authentik_providers_saml.change_samlprovider"],
+    )
+    @extend_schema(
+        responses={
+            200: SAMLProviderSerializer,
+            400: OpenApiResponse(description="Bad request"),
+        },
+    )
+    @action(detail=True, methods=["POST"])
+    def refresh_metadata(self, request: Request, pk: int) -> Response:
+        """Refresh provider metadata from stored URL"""
+        provider: SAMLProvider = self.get_object()
+        if not provider.metadata_url:
+            raise ValidationError(_("No metadata URL configured for this provider"))
+
+        try:
+            response = get_http_session().get(provider.metadata_url)
+            response.raise_for_status()
+            raw_xml = response.content
+        except RequestException as exc:
+            raise ValidationError(
+                _("Failed to fetch metadata: {error}".format_map({"error": str(exc)}))
+            ) from None
+
+        try:
+            fromstring(raw_xml)
+        except ParseError:
+            raise ValidationError(_("Invalid XML Syntax")) from None
+
+        try:
+            metadata = ServiceProviderMetadataParser().parse(raw_xml.decode())
+            # Update provider fields from refreshed metadata
+            provider.issuer = metadata.entity_id
+            provider.sp_binding = metadata.acs_binding
+            provider.acs_url = metadata.acs_location
+            provider.default_name_id_policy = metadata.name_id_policy
+            if metadata.sls_location:
+                provider.sls_url = metadata.sls_location
+            if metadata.sls_binding:
+                provider.sls_binding = metadata.sls_binding
+            # Handle keypair updates if metadata contains them
+            if metadata.signing_keypair and metadata.auth_n_request_signed:
+                metadata.signing_keypair.name = (
+                    f"Provider {provider.name} - SAML Signing Certificate"
+                )
+                metadata.signing_keypair.save()
+                provider.verification_kp = metadata.signing_keypair
+            if metadata.encryption_keypair:
+                metadata.encryption_keypair.name = (
+                    f"Provider {provider.name} - SAML Encryption Certificate"
+                )
+                metadata.encryption_keypair.save()
+                provider.encryption_kp = metadata.encryption_keypair
+            provider.save()
+            return Response(SAMLProviderSerializer(provider).data)
+        except ValueError as exc:
+            raise ValidationError(
+                _("Failed to parse metadata: {messages}".format_map({"messages": str(exc)}))
             ) from None
 
     @permission_required(
