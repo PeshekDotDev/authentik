@@ -1,13 +1,15 @@
 import "#admin/providers/RelatedApplicationButton";
 import "#admin/providers/saml/SAMLProviderForm";
-import "#admin/rbac/ObjectPermissionsPage";
-import "#components/events/ObjectChangelog";
+import "#admin/rbac/ak-rbac-object-permission-page";
+import "#admin/events/ObjectChangelog";
 import "#elements/CodeMirror";
 import "#elements/EmptyState";
 import "#elements/Tabs";
 import "#elements/buttons/ActionButton/index";
 import "#elements/buttons/ModalButton";
 import "#elements/buttons/SpinnerButton/index";
+
+import { logoutMethodLabel } from "./SAMLProviderOptions.js";
 
 import { DEFAULT_CONFIG } from "#common/api/config";
 import { EVENT_REFRESH } from "#common/constants";
@@ -24,8 +26,8 @@ import {
     CoreApi,
     CoreUsersListRequest,
     CryptoApi,
+    ModelEnum,
     ProvidersApi,
-    RbacPermissionsAssignedByRolesListModelEnum,
     SAMLMetadata,
     SAMLProvider,
     User,
@@ -152,6 +154,13 @@ export class SAMLProviderViewPage extends AKElement {
         }
     }
 
+    renderLogoutMethod(): string {
+        if (!this.provider?.slsUrl) {
+            return "-";
+        }
+        return logoutMethodLabel(this.provider.logoutMethod) || "-";
+    }
+
     renderRelatedObjects(): TemplateResult {
         const relatedObjects = [];
         if (this.provider?.assignedApplicationName) {
@@ -259,23 +268,20 @@ export class SAMLProviderViewPage extends AKElement {
                     class="pf-c-page__main-section pf-m-no-padding-mobile"
                 >
                     <div class="pf-c-card">
-                        <div class="pf-c-card__body">
-                            <ak-object-changelog
-                                targetModelPk=${this.provider?.pk || ""}
-                                targetModelName=${this.provider?.metaModelName || ""}
-                            >
-                            </ak-object-changelog>
-                        </div>
+                        <ak-object-changelog
+                            targetModelPk=${this.provider?.pk || ""}
+                            targetModelName=${this.provider?.metaModelName || ""}
+                        >
+                        </ak-object-changelog>
                     </div>
                 </div>
                 <ak-rbac-object-permission-page
-                    class="pf-c-page__main-section pf-m-no-padding-mobile"
                     role="tabpanel"
                     tabindex="0"
                     slot="page-permissions"
                     id="page-permissions"
                     aria-label="${msg("Permissions")}"
-                    model=${RbacPermissionsAssignedByRolesListModelEnum.AuthentikProvidersSamlSamlprovider}
+                    model=${ModelEnum.AuthentikProvidersSamlSamlprovider}
                     objectPk=${this.provider.pk}
                 ></ak-rbac-object-permission-page>
             </ak-tabs>
@@ -324,18 +330,6 @@ export class SAMLProviderViewPage extends AKElement {
                             <div class="pf-c-description-list__group">
                                 <dt class="pf-c-description-list__term">
                                     <span class="pf-c-description-list__text">${msg(
-                                        "ACS URL",
-                                    )}</span>
-                                </dt>
-                                <dd class="pf-c-description-list__description">
-                                    <div class="pf-c-description-list__text">
-                                        ${this.provider.acsUrl}
-                                    </div>
-                                </dd>
-                            </div>
-                            <div class="pf-c-description-list__group">
-                                <dt class="pf-c-description-list__term">
-                                    <span class="pf-c-description-list__text">${msg(
                                         "Audience",
                                     )}</span>
                                 </dt>
@@ -348,12 +342,36 @@ export class SAMLProviderViewPage extends AKElement {
                             <div class="pf-c-description-list__group">
                                 <dt class="pf-c-description-list__term">
                                     <span class="pf-c-description-list__text">${msg(
-                                        "Issuer",
+                                        "ACS URL",
                                     )}</span>
                                 </dt>
                                 <dd class="pf-c-description-list__description">
                                     <div class="pf-c-description-list__text">
-                                        ${this.provider.issuer}
+                                        ${this.provider.acsUrl}
+                                    </div>
+                                </dd>
+                            </div>
+                            <div class="pf-c-description-list__group">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">${msg(
+                                        "SLS URL",
+                                    )}</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">
+                                        ${this.provider.slsUrl || "-"}
+                                    </div>
+                                </dd>
+                            </div>
+                            <div class="pf-c-description-list__group">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">${msg(
+                                        "Logout Method",
+                                    )}</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">
+                                        ${this.renderLogoutMethod()}
                                     </div>
                                 </dd>
                             </div>
@@ -361,7 +379,7 @@ export class SAMLProviderViewPage extends AKElement {
                     </div>
                     <div class="pf-c-card__footer">
                         <ak-forms-modal>
-                            <span slot="submit">${msg("Update")}</span>
+                            <span slot="submit">${msg("Save Changes")}</span>
                             <span slot="header">${msg("Update SAML Provider")}</span>
                             <ak-provider-saml-form slot="form" .instancePk=${this.provider.pk || 0}>
                             </ak-provider-saml-form>
@@ -388,34 +406,26 @@ export class SAMLProviderViewPage extends AKElement {
                                               class="pf-c-form-control"
                                               readonly
                                               type="text"
-                                              value="${ifDefined(this.provider?.issuer)}"
+                                              value="${ifDefined(this.provider?.urlIssuer)}"
                                           />
                                       </div>
                                       <div class="pf-c-form__group">
                                           <label class="pf-c-form__label">
                                               <span class="pf-c-form__label-text"
-                                                  >${msg("SSO URL (Post)")}</span
+                                                  >${msg("SAML Endpoint")}</span
                                               >
                                           </label>
                                           <input
                                               class="pf-c-form-control"
                                               readonly
                                               type="text"
-                                              value="${ifDefined(this.provider.urlSsoPost)}"
+                                              value="${ifDefined(this.provider.urlUnified)}"
                                           />
-                                      </div>
-                                      <div class="pf-c-form__group">
-                                          <label class="pf-c-form__label">
-                                              <span class="pf-c-form__label-text"
-                                                  >${msg("SSO URL (Redirect)")}</span
-                                              >
-                                          </label>
-                                          <input
-                                              class="pf-c-form-control"
-                                              readonly
-                                              type="text"
-                                              value="${ifDefined(this.provider.urlSsoRedirect)}"
-                                          />
+                                          <p class="pf-c-form__helper-text">
+                                              ${msg(
+                                                  "SAML provider endpoint. Use this URL for SP configuration.",
+                                              )}
+                                          </p>
                                       </div>
                                       <div class="pf-c-form__group">
                                           <label class="pf-c-form__label">
@@ -427,33 +437,7 @@ export class SAMLProviderViewPage extends AKElement {
                                               class="pf-c-form-control"
                                               readonly
                                               type="text"
-                                              value="${ifDefined(this.provider.urlSsoInit)}"
-                                          />
-                                      </div>
-                                      <div class="pf-c-form__group">
-                                          <label class="pf-c-form__label">
-                                              <span class="pf-c-form__label-text"
-                                                  >${msg("SLO URL (Post)")}</span
-                                              >
-                                          </label>
-                                          <input
-                                              class="pf-c-form-control"
-                                              readonly
-                                              type="text"
-                                              value="${ifDefined(this.provider.urlSloPost)}"
-                                          />
-                                      </div>
-                                      <div class="pf-c-form__group">
-                                          <label class="pf-c-form__label">
-                                              <span class="pf-c-form__label-text"
-                                                  >${msg("SLO URL (Redirect)")}</span
-                                              >
-                                          </label>
-                                          <input
-                                              class="pf-c-form-control"
-                                              readonly
-                                              type="text"
-                                              value="${ifDefined(this.provider.urlSloRedirect)}"
+                                              value="${ifDefined(this.provider.urlUnifiedInit)}"
                                           />
                                       </div>
                                   </form>

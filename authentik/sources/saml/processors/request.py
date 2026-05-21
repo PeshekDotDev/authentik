@@ -20,7 +20,7 @@ from authentik.lib.xml import remove_xml_newlines
 from authentik.providers.saml.utils import get_random_id
 from authentik.providers.saml.utils.encoding import deflate_and_base64_encode
 from authentik.providers.saml.utils.time import get_time_string
-from authentik.sources.saml.models import SAMLSource
+from authentik.sources.saml.models import SAMLBindingTypes, SAMLSource
 
 SESSION_KEY_REQUEST_ID = "authentik/sources/saml/request_id"
 
@@ -67,10 +67,12 @@ class RequestProcessor:
         auth_n_request.attrib["IssueInstant"] = self.issue_instant
         auth_n_request.attrib["ProtocolBinding"] = SAML_BINDING_POST
         auth_n_request.attrib["Version"] = "2.0"
+        if self.source.force_authn:
+            auth_n_request.attrib["ForceAuthn"] = "true"
         # Create issuer object
         auth_n_request.append(self.get_issuer())
 
-        if self.source.signing_kp:
+        if self.source.signing_kp and self.source.binding_type != SAMLBindingTypes.REDIRECT:
             sign_algorithm_transform = SIGN_ALGORITHM_TRANSFORM_MAP.get(
                 self.source.signature_algorithm, xmlsec.constants.TransformRsaSha1
             )
@@ -91,7 +93,7 @@ class RequestProcessor:
         (used for POST Bindings)"""
         auth_n_request = self.get_auth_n()
 
-        if self.source.signing_kp:
+        if self.source.signing_kp and self.source.binding_type != SAMLBindingTypes.REDIRECT:
             xmlsec.tree.add_ids(auth_n_request, ["ID"])
 
             ctx = xmlsec.SignatureContext()

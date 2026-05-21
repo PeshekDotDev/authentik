@@ -4,7 +4,7 @@ sidebar_label: pfSense
 support_level: community
 ---
 
-## What is pfSense
+## What is pfSense?
 
 > The pfSense project is a free network firewall distribution, based on the FreeBSD operating system with a custom kernel and including third party free software packages for additional functionality.
 >
@@ -76,18 +76,18 @@ Change the following fields
 - Base DN: `DC=ldap,DC=goauthentik,DC=io`
 - Search Scope: Subtree
 - Authentication containers: `OU=users,DC=ldap,DC=goauthentik,DC=io`
-- Bind anonymous: **unticked**
+- Bind anonymous: **Unchecked**
 - Bind credentials:
     - User DN: `cn=pfsense-user,ou=users,dc=ldap,dc=goauthentik,dc=io`
     - Password: `<pfsense-user password from step 2>`
 - Group member attribute: `memberOf`
-- Allow unauthenticated bind: **unticked**
+- Allow unauthenticated bind: **Unchecked**
 
 ## pfSense secure setup (with SSL)
 
 When enabling SSL, authentik will send a certificate to pfSense. This certificate has to be signed by a certificate authority trusted by pfSense. In this setup we will create our own certificate authority in pfSense and create a certificate that will be used by authentik.
 
-### Step 1 - Certificate Authority
+### Step 1 - certificate authority
 
 In pfSense, create a certificate authority under _System/Cert. Manager_ and click the `+ Add` button.
 
@@ -95,7 +95,7 @@ In pfSense, create a certificate authority under _System/Cert. Manager_ and clic
 - Method: Create an internal Certificate Authority
 - Common Name : `pfSense CA`
 
-### Step 2 - Server Certificate
+### Step 2 - server certificate
 
 In pfSense, create a server certificate under _System/Cert. Manager_. Go to the _Certificates_ tab then click the `+ Add` button.
 
@@ -135,12 +135,12 @@ Change the following fields
 - Base DN: `DC=ldap,DC=goauthentik,DC=io`
 - Search Scope: Subtree
 - Authentication containers: `OU=users,DC=ldap,DC=goauthentik,DC=io`
-- Bind anonymous: **unticked**
+- Bind anonymous: **Unchecked**
 - Bind credentials:
     - User DN: `cn=pfsense-user,ou=users,dc=ldap,dc=goauthentik,dc=io`
     - Password: `<pfsense-user password from step 2>`
 - Extended Query: &(objectClass=user)
-- Allow unauthenticated bind: **unticked**
+- Allow unauthenticated bind: **Unchecked**
 
 ## Test your setup
 

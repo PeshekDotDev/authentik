@@ -1,10 +1,31 @@
-FROM --platform=${BUILDPLATFORM} docker.io/library/node:25.6.0-trixie@sha256:3b6ef8bf8ea0d849a07b3a24b0f64f25381ba2c9abb8825bc424e92a87b5e797 AS docs-builder
+FROM --platform=${BUILDPLATFORM} docker.io/library/node:25.9.0-trixie@sha256:e588aafb1146d1dfdc9227195d4fb779fba528b2b937ac5b729a0c269cfb7595 AS docs-builder
 
 ENV NODE_ENV=production
 
-WORKDIR /work/website
+WORKDIR /work
 
-RUN --mount=type=bind,target=/work/website/package.json,src=./website/package.json \
+RUN --mount=type=bind,target=/work/package.json,src=./package.json \
+    --mount=type=bind,target=/work/package-lock.json,src=./package-lock.json \
+    --mount=type=bind,target=/work/scripts/node/,src=./scripts/node/ \
+    --mount=type=bind,target=/work/packages/logger-js/,src=./packages/logger-js/ \
+    --mount=type=bind,target=/work/packages/tsconfig/,src=./packages/tsconfig/ \
+    --mount=type=bind,target=/work/packages/eslint-config/,src=./packages/eslint-config/ \
+    --mount=type=bind,target=/work/packages/prettier-config/,src=./packages/prettier-config/ \
+    --mount=type=bind,target=/work/packages/docusaurus-config/,src=./packages/docusaurus-config/ \
+    --mount=type=bind,target=/work/website/package.json,src=./website/package.json \
+    --mount=type=bind,target=/work/website/package-lock.json,src=./website/package-lock.json \
+    node ./scripts/node/setup-corepack.mjs --force && \
+    node ./scripts/node/lint-runtime.mjs ./website
+
+RUN --mount=type=bind,target=/work/package.json,src=./package.json \
+    --mount=type=bind,target=/work/package-lock.json,src=./package-lock.json \
+    --mount=type=bind,target=/work/scripts/node/,src=./scripts/node/ \
+    --mount=type=bind,target=/work/packages/logger-js/,src=./packages/logger-js/ \
+    --mount=type=bind,target=/work/packages/tsconfig/,src=./packages/tsconfig/ \
+    --mount=type=bind,target=/work/packages/eslint-config/,src=./packages/eslint-config/ \
+    --mount=type=bind,target=/work/packages/prettier-config/,src=./packages/prettier-config/ \
+    --mount=type=bind,target=/work/packages/docusaurus-config/,src=./packages/docusaurus-config/ \
+    --mount=type=bind,target=/work/website/package.json,src=./website/package.json \
     --mount=type=bind,target=/work/website/package-lock.json,src=./website/package-lock.json \
     --mount=type=bind,target=/work/website/vendored/detect-package-manager,src=./website/vendored/detect-package-manager \
     --mount=type=bind,target=/work/website/docusaurus-theme/package.json,src=./website/docusaurus-theme/package.json \
@@ -12,7 +33,10 @@ RUN --mount=type=bind,target=/work/website/package.json,src=./website/package.js
     --mount=type=bind,target=/work/website/integrations/package.json,src=./website/integrations/package.json \
     --mount=type=bind,target=/work/website/docs/package.json,src=./website/docs/package.json \
     --mount=type=cache,id=npm-website,sharing=shared,target=/root/.npm \
-    npm ci --workspaces --include-workspace-root
+    corepack npm ci && \
+    corepack npm ci --workspaces --include-workspace-root --prefix ./website
+
+WORKDIR /work/website
 
 COPY ./website /work/website/
 COPY ./blueprints /work/blueprints/
@@ -20,8 +44,18 @@ COPY ./schema.yml /work/
 COPY ./lifecycle/container/compose.yml /work/lifecycle/container/
 COPY ./SECURITY.md /work/
 
-RUN npm run build
+RUN  --mount=type=bind,target=/work/packages/docusaurus-config/,src=./packages/docusaurus-config/ \
+    corepack npm run build -w docs
 
-FROM docker.io/library/nginx:1.29-trixie@sha256:9dd288848f4495869f76676e419ae2d767ca99fece2ec37ec0261f9fdaab5204
+FROM docker.io/library/nginx:1.29-trixie@sha256:1881968aff6f7cdcc4b888c00a11f4ce241ad7ec957e0cb4a9e19e93a3ff87ea
+LABEL org.opencontainers.image.authors="Authentik Security Inc." \
+    org.opencontainers.image.source="https://github.com/goauthentik/authentik" \
+    org.opencontainers.image.description="authentik product documentation" \
+    org.opencontainers.image.documentation="https://docs.goauthentik.io" \
+    org.opencontainers.image.licenses="https://github.com/goauthentik/authentik/blob/main/LICENSE" \
+    org.opencontainers.image.title="authentik docs image" \
+    org.opencontainers.image.url="https://goauthentik.io" \
+    org.opencontainers.image.vendor="Authentik Security Inc."
+
 
 COPY --from=docs-builder /work/website/docs/build /usr/share/nginx/html

@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, model_validator
 from pydanticscim.group import Group as BaseGroup
+from pydanticscim.group import GroupMember as BaseGroupMember
 from pydanticscim.responses import PatchOperation as BasePatchOperation
 from pydanticscim.responses import PatchRequest as BasePatchRequest
 from pydanticscim.responses import SCIMError as BaseSCIMError
@@ -65,7 +66,7 @@ class EnterpriseUser(BaseModel):
     employeeNumber: str | None = Field(
         None,
         description="Numeric or alphanumeric identifier assigned to a person, "
-        "typically based on order of hire or association with anorganization.",
+        "typically based on order of hire or association with an organization.",
     )
     costCenter: str | None = Field(None, description="Identifies the name of a cost center.")
     organization: str | None = Field(None, description="Identifies the name of an organization.")
@@ -73,7 +74,7 @@ class EnterpriseUser(BaseModel):
     department: str | None = Field(
         None,
         description="Numeric or alphanumeric identifier assigned to a person,"
-        " typically based on order of hire or association with anorganization.",
+        " typically based on order of hire or association with an organization.",
     )
     manager: Manager | None = Field(
         None,
@@ -160,6 +161,13 @@ class Group(BaseGroup):
     schemas: list[str] = [SCIM_GROUP_SCHEMA]
     externalId: str | None = None
     meta: dict | None = None
+    members: list[GroupMember] | None = Field(None, description="A list of members of the Group.")
+
+
+class GroupMember(BaseGroupMember):
+    """Modified GroupMember that allows extra fields"""
+
+    model_config = ConfigDict(extra="allow")
 
 
 class Bulk(BaseBulk):

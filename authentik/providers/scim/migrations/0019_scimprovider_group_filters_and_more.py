@@ -16,7 +16,7 @@ def make_many_groups(apps: Apps, schema_editor: BaseDatabaseSchemaEditor):
     many-to-many relationship in SCIMProvider.group_filters"""
     db_alias = schema_editor.connection.alias
 
-    Event = apps.get_model("authentik_events", "Event")
+    from authentik.lib.migrations import migration_event
 
     SCIMProvider = apps.get_model("authentik_providers_scim", "scimprovider")
 
@@ -26,8 +26,10 @@ def make_many_groups(apps: Apps, schema_editor: BaseDatabaseSchemaEditor):
         provider.group_filters.add(provider.filter_group)
         provider.dry_run = True
         provider.save(update_fields=["dry_run"])
-        event = Event.new(
-            action=EventAction.CONFIGURATION_WARNING,
+        migration_event(
+            apps,
+            schema_editor,
+            EventAction.CONFIGURATION_WARNING,
             message=(
                 "SCIM Providers' `filter_group` has been removed in favor of `group_filters`. Your configuration has been migrated."
                 "To prevent users/groups from being removed, the provider's dry-run mode has been enabled. Please review "
@@ -35,7 +37,6 @@ def make_many_groups(apps: Apps, schema_editor: BaseDatabaseSchemaEditor):
             ),
             provider=provider,
         )
-        event.save(using=db_alias)
 
 
 class Migration(migrations.Migration):
@@ -81,6 +82,36 @@ class Migration(migrations.Migration):
                 default=None,
                 help_text="Group filters used to define sync-scope for groups.",
                 to="authentik_core.group",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="scimprovider",
+            name="compatibility_mode",
+            field=models.CharField(
+                choices=[
+                    ("default", "Default"),
+                    ("aws", "AWS"),
+                    ("slack", "Slack"),
+                    ("sfdc", "Salesforce"),
+                    ("webex", "Webex"),
+                    ("vcenter", "vCenter"),
+                ],
+                default="default",
+                help_text="Alter authentik behavior for vendor-specific SCIM implementations.",
+                max_length=30,
+                verbose_name="SCIM Compatibility Mode",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="scimprovider",
+            name="auth_mode",
+            field=models.TextField(
+                choices=[
+                    ("token", "Token"),
+                    ("oauth", "OAuth (Silent)"),
+                    ("oauth_interactive", "OAuth (interactive)"),
+                ],
+                default="token",
             ),
         ),
     ]

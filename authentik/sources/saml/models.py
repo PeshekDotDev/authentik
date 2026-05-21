@@ -7,6 +7,7 @@ from django.http import HttpRequest
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from lxml.etree import _Element  # nosec
 from rest_framework.serializers import Serializer
 
 from authentik.common.saml.constants import (
@@ -115,6 +116,12 @@ class SAMLSource(Source):
             "as no validation of the request ID is done."
         ),
     )
+    force_authn = models.BooleanField(
+        default=False,
+        help_text=_(
+            "When enabled, the IdP will re-authenticate the user even if a session exists."
+        ),
+    )
     name_id_policy = models.TextField(
         choices=SAMLNameIDPolicy.choices,
         default=SAMLNameIDPolicy.PERSISTENT,
@@ -217,9 +224,8 @@ class SAMLSource(Source):
     def property_mapping_type(self) -> type[PropertyMapping]:
         return SAMLSourcePropertyMapping
 
-    def get_base_user_properties(self, root: Any, name_id: Any, **kwargs):
+    def get_base_user_properties(self, root: _Element, assertion: _Element, name_id: Any, **kwargs):
         attributes = {}
-        assertion = root.find(f"{{{NS_SAML_ASSERTION}}}Assertion")
         if assertion is None:
             raise ValueError("Assertion element not found")
         attribute_statement = assertion.find(f"{{{NS_SAML_ASSERTION}}}AttributeStatement")
@@ -278,7 +284,7 @@ class SAMLSource(Source):
                 }
             ),
             name=self.name,
-            icon_url=self.icon_url,
+            icon_url=self.get_icon_url(request, use_cache=False) or self.icon_url,
             promoted=self.promoted,
         )
 

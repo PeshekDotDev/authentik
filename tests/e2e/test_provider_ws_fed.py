@@ -12,11 +12,16 @@ from authentik.enterprise.providers.ws_federation.models import WSFederationProv
 from authentik.flows.models import Flow
 from authentik.lib.generators import generate_id
 from authentik.providers.saml.models import SAMLPropertyMapping
-from tests.e2e.utils import SeleniumTestCase, retry
+from tests.decorators import retry
+from tests.selenium import SeleniumTestCase
 
 
 class TestProviderWSFed(SeleniumTestCase):
     """test WS Federation flow"""
+
+    def setUp(self):
+        self.realm = generate_id()
+        super().setUp()
 
     def setup_client(self, provider: WSFederationProvider, app: Application, **kwargs):
         metadata_url = (
@@ -32,7 +37,7 @@ class TestProviderWSFed(SeleniumTestCase):
                 "8080": "8080",
             },
             environment={
-                "WSFED_TEST_SP_WTREALM": f"goauthentik.io://app/{app.slug}",
+                "WSFED_TEST_SP_WTREALM": self.realm,
                 "WSFED_TEST_SP_METADATA": metadata_url,
                 **kwargs,
             },
@@ -61,6 +66,7 @@ class TestProviderWSFed(SeleniumTestCase):
         provider = WSFederationProvider.objects.create(
             name=generate_id(),
             acs_url="http://localhost:8080",
+            audience=self.realm,
             authorization_flow=authorization_flow,
             invalidation_flow=invalidation_flow,
             signing_kp=create_test_cert(),
@@ -147,6 +153,7 @@ class TestProviderWSFed(SeleniumTestCase):
         provider = WSFederationProvider.objects.create(
             name=generate_id(),
             acs_url="http://localhost:8080",
+            audience=self.realm,
             authorization_flow=authorization_flow,
             signing_kp=create_test_cert(),
         )
